@@ -24,10 +24,8 @@ def gencandcsv(candsfiles, filelist, snr_th = 6, clustersize_th = 2, dm_min = 10
    
     filelist.sort()
     ext = filelist[0].split('.')[-1]
-    if ext == "fits" or ext == "sf":
-        basename = os.path.basename(filelist[0]).split('.')[0][:-5]
-    elif ext == "fil":
-        basename = os.path.basename(filelist[0]).split('.')[0]
+    if ext == "fits" or ext == "sf" or ext == "fil":
+        basename = os.path.splitext(os.path.basename(filelist[0]))[0]
     else:
         raise TypeError("Can only work with list of fits file or filterbanks")
     
