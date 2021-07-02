@@ -40,7 +40,7 @@ def gencandcsv(
         else:
             raise TypeError("Can only work with list of fits file or filterbanks")
 
-    if outname[:-4] != ".csv":
+    if outname[-4:] != ".csv":
         outname = outname + ".csv"
 
     cands_out = pd.DataFrame(
