@@ -46,17 +46,18 @@ else:
 #output = check_output(["your_writer.py","-f",/lorule/scratch/rat0022/tpp/vegas_59087_79895_Fermi_0004_0001.fits,"--type",fil])
 #files=print(values.fin[0])
 #subprocess.run(args,shell=True)
-cmd="your_writer.py -v -f /lorule/scratch/rat0022/tpp/vegas_59087_79895_Fermi_0004_0001.fits -t fil -r -sksig 4 -sgsig 4 -sgfw 15"
+filename='/lorule/scratch/rat0022/tpp/vegas_59087_79895_Fermi_0004_0001.fits'
+cmd="your_writer.py -v -f"+str(filename)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15"
 subprocess.Popen(cmd,shell=True)
 
 # Running decimate
-deci_cmd="decimate *fil -t 2 -z 1 > " 
-subprocess.Popen(deci_cmd,shell=True)
+#deci_cmd="decimate *fil -t 2 -z 1 > " 
+#subprocess.Popen(deci_cmd,shell=True)
 
 # Running heimdall
 
-heimdall_cmd = "your_heimdall.py -f *fil -dm 0 100"
-subprocess.Popen(heimdall_cmd,shell=True)
+#heimdall_cmd = "your_heimdall.py -f *fil -dm 0 100"
+#subprocess.Popen(heimdall_cmd,shell=True)
 
 
 #
