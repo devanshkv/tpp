@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+import numpy as np
+
+import logging
+#logger = logging.getLogger(__name__) # Need to dig into this; what does it do? Is it necessary?
+logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+logging.debug('This message should go to the log file')
+logging.info('So should this')
+logging.warning('And this, too')
+logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
+"""
+On the use of logging:
+ - "debug" tag will be used for writing information that will be put into the database manager.
+ - "info" will report status.
+ - error and warnings will be used as intended.
+
+This way, a database-ingestion script can easily scan and interpret logs.
+"""
+
+
 
 """
 *If we have a wrapper, we can avoid putting database links in our core TPP pipeline.*
@@ -29,6 +48,7 @@ What boxcar sampling times are needed (up to 32ms)?
 8) 
 """
 
+logging.info('So should this')
 
 
 
