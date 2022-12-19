@@ -3,11 +3,11 @@ import numpy as np
 
 import logging
 #logger = logging.getLogger(__name__) # Need to dig into this; what does it do? Is it necessary?
-logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
-logging.debug('This message should go to the log file')
-logging.info('So should this')
-logging.warning('And this, too')
-logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
+#logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
+#logging.debug('This message should go to the log file')
+#logging.info('So should this')
+#logging.warning('And this, too')
+#logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
 """
 On the use of logging:
  - "debug" tag will be used for writing information that will be put into the database manager.
@@ -21,15 +21,16 @@ This way, a database-ingestion script can easily scan and interpret logs.
 import argparse
 import glob
 import your
+from your import Your
 import subprocess
-from your import Your, Writer
 import os
 from your.utils.misc import YourArgparseFormatter
-
+import time
+import numpy
 """
 PIPELINE ITSELF:
 0) Set up logging.
-1) Read in file name and directory (from command line).
+1) Read in file name from the command line
 2) Ingest header information. We’ll need: 
 Center freq
 BW
@@ -55,8 +56,31 @@ logging.info('So should this')
 
 
 #1) Read in file name and directory (from command line).
-
-files ='/lorule/scratch/rat0022/tpp/*.fits'
+parser = argparse.ArgumentParser(
+    prog="tpp_pipeline.py",
+    description="Convert PSRFITS to FILTERBANK, makes a dedispersion plan, decimate the files if needed, runs HEIMDALL, makes h5s files of candidates, classifies using FETCH",
+    formatter_class=YourArgparseFormatter,
+)
+parser.add_argument(
+    "-f",
+    "--files",
+    help="Paths of input files to be converted to an output format.",
+    required=True,
+    nargs="+",
+)
+parser.add_argument(
+    "-dl",
+    "--low_dm",
+    help="Lower limit of the DM to search for",
+    required=True,
+)
+parser.add_argument(
+    "-du",
+    "--high_dm",
+    help="Upper limit of the DM to search for",
+    required=True,
+)
+values = parser.parse_args()
     
 
 
@@ -65,20 +89,20 @@ files ='/lorule/scratch/rat0022/tpp/*.fits'
 #BW
 #Tsamp
 #Length of dataset
-y= Your(glob.glob(files))
-print(files)
+y= Your(values.files)
+print("Reading raw data from "+str(values.files)+"\n")
 center_freq=y.your_header.center_freq
-print("The center frequency is "+str(center_freq))
+print("The center frequency is "+str(center_freq)+" MHz\n")
 bw=y.your_header.bw
-print("The bandwidth is "+str(bw))
+print("The bandwidth is "+str(bw)+" MHz\n")
 tsamp=y.your_header.native_tsamp
-print("The native sampling time is "+str(tsamp))
+print("The native sampling time is "+str(tsamp)+" s\n")
 obs_len = y.your_header.native_nspectra*tsamp
 if obs_len >= 60:
     obs_len_min = obs_len/60
-    print("Dataset length is "+str(obs_len_min)+" minutes")
+    print("Dataset length is "+str(obs_len_min)+" minutes\n")
 else:
-    print("Dataset length is "+str(obs_len)+" seconds")
+    print("Dataset length is "+str(obs_len)+" seconds\n")
 
 #3) Set up search parameters:
 #What max DM is feasible?
@@ -87,24 +111,70 @@ else:
 
 
 #4) Run actual pipeline parts
-# Running writert
-#files=print(values.fin[0])
-#output = check_output(["your_writer.py","-f",/lorule/scratch/rat0022/tpp/vegas_59087_79895_Fermi_0004_0001.fits,"--type",fil])
-#files=print(values.fin[0])
-#subprocess.run(args,shell=True)
-filename='/lorule/scratch/rat0022/tpp/vegas_59087_79895_Fermi_0004_0001.fits'
-cmd="your_writer.py -v -f"+str(filename)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15"
-subprocess.Popen(cmd,shell=True)
 
-# Running decimate
-#deci_cmd="decimate *fil -t 2 -z 1 > " 
-#subprocess.Popen(deci_cmd,shell=True)
+
+#Running your_writer with standarf RFI mitigation/
+print('Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
+
+
+cmd="your_writer.py -v -f"+y.your_header.filename+" -t fil"
+subprocess.call(cmd,shell=True)
+
+# Running DDplan.py
+if center_freq<1000: 
+    print("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
+
+    ddplan_cmd="DDplan.py -o "+y.your_header.basename+"_ddplan -l 0 -d 3600 -f "+str(center_freq)+ " -b "+str(np.abs(bw))+ " -n "+str(y.your_header.native_nchans)+ " -t"+str(tsamp)+" -w >"+ y.your_header.basename+"_ddplan.txt" 
+    subprocess.call(ddplan_cmd,shell=True)
+    print('DDplan completed. A text file is created\n')
+    # Read the input from the text file and decimate. To be fixed....
+    deci_cmd="decimate *fil -t 2 -c 1 >"+str(y.your_header.basename)+"_decimated.fil" 
+    subprocess.call(deci_cmd,shell=True)
+
+
 
 # Running heimdall
+your_fil_object = Your(glob.glob('*fil'))
+print("Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
+print("Preparing to run Heimdall..\n")
 
-#heimdall_cmd = "your_heimdall.py -f *fil -dm 0 100"
-#subprocess.Popen(heimdall_cmd,shell=True)
+heimdall_cmd = "your_heimdall.py -f *fil -dm "+str(values.low_dm)+" "+ str(values.high_dm)
+subprocess.call(heimdall_cmd,shell=True)
 
+# go to the new directory with the heimdall cands
+cand_dir=os.chdir(os.getcwd()
+        + "/"
+        + your_fil_object.your_header.basename)
+print("Now you are at "+str(os.getcwd())"\n\n")
 
-#
+#path_to_candcsv='/scratch/rat0022/tpp/'
 
+print('Creating a csv file to get all the info from all the cand files...\n')
+fil_file=your_fil_object.your_header.filename
+#print(str(fil_file))
+os.system('python /scratch/rat0022/tpp/candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
+
+#Create a directory for the h5s
+try:
+    os.makedirs("h5")
+except FileExistsError:
+    pass
+
+print('Preparing to run your_candmaker.py that makes h5 files.....\n')
+candmaker_cmd ="your_candmaker.py -c *csv -g 0 -n 4 -o ./h5/"
+subprocess.call(candmaker_cmd,shell=True)
+
+#make a directory for h5 files
+if os.path.isfile('*h5'):
+    print('making h5s\n')
+else:
+    print("h5s are not created!\n")
+
+os.chdir(os.getcwd()+'/h5')
+print("Now you are at "+str(os.getcwd())"\n")
+
+print("Preparing to run FETCH....\n")
+fetch_cmd='predict.py -c . -m a -p 0.1'
+subprocess.call(fetch_cmd,shell=True)
+
+exit()
