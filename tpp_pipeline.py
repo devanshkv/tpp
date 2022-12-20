@@ -25,8 +25,7 @@ from your import Your
 import subprocess
 import os
 from your.utils.misc import YourArgparseFormatter
-import time
-import numpy
+
 """
 PIPELINE ITSELF:
 0) Set up logging.
@@ -147,7 +146,6 @@ cand_dir=os.chdir(os.getcwd()
         + your_fil_object.your_header.basename)
 print("Now you are at "+str(os.getcwd())"\n\n")
 
-#path_to_candcsv='/scratch/rat0022/tpp/'
 
 print('Creating a csv file to get all the info from all the cand files...\n')
 fil_file=your_fil_object.your_header.filename
