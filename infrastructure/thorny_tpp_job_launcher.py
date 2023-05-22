@@ -25,6 +25,7 @@ to be written by Joe Glaser). The purpose of this code is to:
 
 # Allow communications with TPP-DB API
 import requests
+import subprocess
 
 # JOE QUESTION
 ### (how do we deal with the authentication here from within the
@@ -56,25 +57,5 @@ filename = mydata['location_on_filesystem']
 
 
 
-"""
-
-#!/bin/bash
-# Copy/paste this job script into a text file and submit with the command:
-
-#sbatch thefilename
-
-#SBATCH --time=5-23:45:00   # walltime limit (DD-HH:MM)
-#SBATCH --nodes=1  # number of nodes
-#SBATCH --ntasks-per-node=10
-#SBATCH --job-name="Reshma"
-#SBATCH --partition=Korok
-
-### WHAT KIND OF GPU RESOURCE REQUESTS DO WE NEED HERE? ###
-
-# LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE
-### ADD SINGULARITY CALL HERE.
-your_writer.py -f /wvu/scopes/gbo/AGBT20B_407_03_Cband/vegas_59092_80721_Fermi_0007*fits -t fil -nstart 82758620 -nsamp 82758620 -o ./ -name fermi_2_4hr -r -sksig 4 -sgsig 4 -sgfw 15 -g 4096 -fd 8 
-
-"""
-# Can also set up slurm resources on command line.
-# sbatch --nodes=1 --wrap="command to run"
+# Use command line to call slurm. This needs more testing.
+subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"Reshma\" --partition=Korok --wrap=\"SINGULARITY CALL ; COMMAND TO RUN""])
