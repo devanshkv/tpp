@@ -4,7 +4,10 @@ import numpy as np
 import logging
 
 """
-Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
+Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
+searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
+adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
+FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
   
 """ 
 #logger = logging.getLogger(__name__) # Need to dig into this; what does it do? Is it necessary?
