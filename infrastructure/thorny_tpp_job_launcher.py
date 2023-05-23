@@ -50,6 +50,7 @@ headers = {"Authorization": f"Bearer{token}"}
 
 
 # Get the location of DATA_ID from TPP-DB
+#### NOTE SARAH NEEDS TO ADD A COMMS FAILURE CHECK HERE. Do we want to write a subprocess elsewhere that does basic TPP-DB communications success checks?
 mydata = requests.get(tppdb_data + "/" + data_id, headers=headers).json()
 filename = mydata['location_on_filesystem']
 
