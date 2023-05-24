@@ -4,9 +4,16 @@ import numpy as np
 import logging
 
 """
+<<<<<<< HEAD
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
 
 Print statements are to help with logging. Time commands too.
+=======
+Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
+searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
+adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
+FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
+>>>>>>> 1ff82330e990148805da241d6fb15ba373c07743
   
 """ 
 

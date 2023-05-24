@@ -1,0 +1,7 @@
+tpp-db:
+	token: "enter your TPP-DB token here"
+	ip: "enter IP address here"
+	port: "enter port number here"
+
+globus:
+	token: "enter globus key here"
