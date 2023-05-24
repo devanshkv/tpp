@@ -5,8 +5,11 @@ import logging
 
 """
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
+
+Print statements are to help with logging. Time commands too.
   
 """ 
+
 #logger = logging.getLogger(__name__) # Need to dig into this; what does it do? Is it necessary?
 #logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
 #logging.debug('This message should go to the log file')
@@ -30,7 +33,7 @@ from your import Your
 import subprocess
 import os
 from your.utils.misc import YourArgparseFormatter
-import time
+from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
 """
@@ -119,12 +122,16 @@ else:
 #4) Run actual pipeline parts
 
 
-#Running your_writer with standarf RFI mitigation/
-print('Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
+#Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
+print('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
 
-
-writer_cmd="your_writer.py -v -f"+y.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15" 
+writer_start=timer()
+writer_cmd="your_writer.py -v -f"+y.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+y.your_header.basename+"_converted"
 subprocess.call(writer_cmd,shell=True)
+writer_end=timer()
+print('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
+
+'''
 
 # Running DDplan.py
 if center_freq<1000: 
@@ -137,30 +144,35 @@ if center_freq<1000:
     deci_cmd="decimate *fil -t 2 -c 1 >"+str(y.your_header.basename)+"_decimated.fil" 
     subprocess.call(deci_cmd,shell=True)
 
-
+'''
 
 # Running heimdall
-your_fil_object = Your(glob.glob('*converted*fil'))
-print("Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
-print("Preparing to run Heimdall..\n")
+#name = str(y.your_header.basename).split('_')
+heimdall_start=timer()
+your_fil_object=Your(y.your_header.basename+"_converted.fil")
+print("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
+print("HEIMDALL:Preparing to run Heimdall..\n")
 
-heimdall_cmd = "your_heimdall.py -f *fil -g 1 -dm "+str(values.low_dm)+" "+ str(values.high_dm) 
+heimdall_cmd = "your_heimdall.py -f "+ your_fil_object.your_header.filename+" -dm "+str(values.low_dm)+" "+ str(values.high_dm) 
 subprocess.call(heimdall_cmd,shell=True)
+heimdall_end=timer()
+print('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
+
 
 # go to the new directory with the heimdall cands
 cand_dir=os.chdir(os.getcwd()
         + "/"
         + your_fil_object.your_header.basename)
-print("Now you are at "+str(os.getcwd())+"\n")
+print("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
 
-print('Creating a csv file to get all the info from all the cand files...\n')
+print('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
 fil_file=your_fil_object.your_header.filename
 #print(str(fil_file))
 os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
 candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
 num_cands=str(candidates.shape[0])
-print('Number of candidates created = '+num_cands)
+print('CHECK:Number of candidates created = '+num_cands)
 
 #Create a directory for the h5s
 try:
@@ -168,13 +180,19 @@ try:
 except FileExistsError:
     pass
 
-print('Preparing to run your_candmaker.py that makes h5 files.....\n')
-candmaker_cmd ="your_candmaker.py -c *csv -g 0 -n 4 -o ./h5/"
+candmaker_start=timer()
+print('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
+if your_fil_object.your_header.nchans <= 256:
+	gg=-1
+else:
+	gg=0 
+candmaker_cmd ="your_candmaker.py -c *csv -g "+str(gg)+" -n 4 -o ./h5/"
 subprocess.call(candmaker_cmd,shell=True)
-
+candmaker_end=timer()
+print('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
 
 os.chdir(os.getcwd()+'/h5')
-print("Now you are at "+str(os.getcwd())+"\n")
+print("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
 dir_path='./'
 count = 0
@@ -185,9 +203,9 @@ for path in os.listdir(dir_path):
 num_h5s = count-1   #subracting the log file
 
 if int(num_h5s)==int(num_cands):
-    print('All candidiate h5s created')
+    print('CHECK:All candidiate h5s created')
 else:
-    print('Not all cand h5s are created')
+    print('CHECK:Not all cand h5s are created')
 
 #check if h5s exist.
 #if os.path.isfile('*h5'):
@@ -195,12 +213,17 @@ else:
 #else:
 #    print("h5s are not created!\n")
 
-print("Preparing to run FETCH....\n")
-fetch_cmd='predict.py -c . -m a -p 0.1'
+fetch_start=timer()
+print("FETCH:Preparing to run FETCH....\n")
+fetch_cmd='predict.py -c . -m a -p 0.2'
 subprocess.call(fetch_cmd,shell=True)
+fetch_end=timer()
+print('FETCH: predict.py took '+str(fetch_end-fetch_start)+' s')
 if os.path.isfile('results_a.csv'):
-	print('FETCH ran successfully!')
-else:
-	print('FETCH did not create a csv file')
+	print('FETCH: FETCH ran successfully')
+	plotter_cmd="your_h5plotter.py -c results_a.csv"
+	subprocess.call(plotter_cmd,shell=True)
 
+else:
+	print('FETCH:FETCH did not create a csv file')
 exit()
