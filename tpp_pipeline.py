@@ -190,6 +190,14 @@ try:
 except FileExistsError:
     pass
 
+"""
+
+NOTE IT IS HERE THAT WE NEED TO DO COORDINATE CORRECTION FOR DRIFTSCAN DATA
+
+"""
+
+
+
 candmaker_start=timer()
 print('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
 if your_fil_object.your_header.nchans <= 256:
