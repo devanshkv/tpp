@@ -1,1 +1,0 @@
-This is where the management/communications code for TPP will live.
