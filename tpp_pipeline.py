@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 """
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
+searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
+adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
+FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
+
+>>>>>>> a9b6c24f7fa766ba933855ccec89f804c1c323b6
 Print statements are to help with logging. Time commands too.
 =======
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
@@ -127,6 +136,14 @@ try:
     os.makedirs("h5")
 except FileExistsError:
     pass
+
+"""
+
+NOTE IT IS HERE THAT WE NEED TO DO COORDINATE CORRECTION FOR DRIFTSCAN DATA
+
+"""
+
+
 
 candmaker_start=timer()
 print('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
