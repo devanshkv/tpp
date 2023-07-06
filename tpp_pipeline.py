@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
-import numpy as np
-
-import logging
-
 """
-<<<<<<< HEAD
-Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
-
 Print statements are to help with logging. Time commands too.
 =======
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
 searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
 adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
-FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
->>>>>>> 1ff82330e990148805da241d6fb15ba373c07743
+FETCH uses model a and a probability of 0.2. Subbanded search is not yet implemented.
   
 """ 
 
@@ -43,35 +35,7 @@ from your.utils.misc import YourArgparseFormatter
 from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
-"""
-PIPELINE ITSELF:
-0) Set up logging.
-1) Read in file name from the command line
-2) Ingest header information. We’ll need: 
-Center freq
-BW
-Tsamp
-Length of dataset
-3) Set up search parameters:
-What max DM is feasible?
-This maximum DM seems approximately reasonable judging by the fact that the smearing in about 300kHz bandwidth at 1.0GHz center frequency is around 25ms (which is just within the 32ms maximum pulse width we are going to be searching). However, this ignores all other telescope configurations and is only really a standard setup for GBT.
-What boxcar sampling times are needed (up to 32ms)?
-4) Run actual pipeline parts
-5) 
-6) 
-7) 
-8) 
-"""
 
-#logging.info('So should this')
-
-
-
-#PIPELINE ITSELF:
-#0) Set up logging.
-
-
-#1) Read in file name and directory (from command line).
 parser = argparse.ArgumentParser(
     prog="tpp_pipeline.py",
     description="Convert PSRFITS to FILTERBANK, makes a dedispersion plan, decimate the files if needed, runs HEIMDALL, makes h5s files of candidates, classifies using FETCH",
@@ -84,27 +48,8 @@ parser.add_argument(
     required=True,
     nargs="+",
 )
-parser.add_argument(
-    "-dl",
-    "--low_dm",
-    help="Lower limit of the DM to search for",
-    required=True,
-)
-parser.add_argument(
-    "-du",
-    "--high_dm",
-    help="Upper limit of the DM to search for",
-    required=True,
-)
-values = parser.parse_args()
-    
-
-
-#2) Ingest header information. We’ll need: 
-#Center freq
-#BW
-#Tsamp
-#Length of dataset
+values = parser.parse_args() 
+   
 y= Your(values.files)
 print("Reading raw data from "+str(values.files)+"\n")
 center_freq=y.your_header.center_freq
@@ -120,16 +65,9 @@ if obs_len >= 60:
 else:
     print("Dataset length is "+str(obs_len)+" seconds\n")
 
-#3) Set up search parameters:
-#What max DM is feasible?
-#This maximum DM seems approximately reasonable judging by the fact that the smearing in about 300kHz bandwidth at 1.0GHz center frequency is around 25ms (which is just within the 32ms maximum pulse width we are going to be searching). However, this ignores all other telescope configurations and is only really a standard setup for GBT.
-#What boxcar sampling times are needed (up to 32ms)?
-
-
-#4) Run actual pipeline parts
-
 
 #Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
+
 print('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
 
 writer_start=timer()
@@ -154,13 +92,17 @@ if center_freq<1000:
 '''
 
 # Running heimdall
-#name = str(y.your_header.basename).split('_')
 heimdall_start=timer()
 your_fil_object=Your(y.your_header.basename+"_converted.fil")
 print("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
 print("HEIMDALL:Preparing to run Heimdall..\n")
-
-heimdall_cmd = "your_heimdall.py -f "+ your_fil_object.your_header.filename+" -dm "+str(values.low_dm)+" "+ str(values.high_dm) 
+def dm_max(obslen,f_low,f_high):
+    dm_h=(obslen*10**3/4.15)*(1/((1/f_low**2)-(1/f_high**2)))
+    return dm_h
+f_low=(center_freq+bw/2)*10**(-3) #in GHz
+f_high=(center_freq-bw/2)*10**(-3) #in GHz
+max_heimdall_dm=int(min(dm_max(obs_len,f_low,f_high),10000))
+heimdall_cmd = "your_heimdall.py -f "+ your_fil_object.your_header.filename+" -dm 0 " + str(max_heimdall_dm) 
 subprocess.call(heimdall_cmd,shell=True)
 heimdall_end=timer()
 print('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
@@ -175,7 +117,6 @@ print("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
 print('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
 fil_file=your_fil_object.your_header.filename
-#print(str(fil_file))
 os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
 candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
 num_cands=str(candidates.shape[0])
@@ -206,19 +147,12 @@ count = 0
 for path in os.listdir(dir_path):
     if os.path.isfile(os.path.join(dir_path, path)):
         count += 1
-#print('File count:', count)
 num_h5s = count-1   #subracting the log file
 
 if int(num_h5s)==int(num_cands):
     print('CHECK:All candidiate h5s created')
 else:
     print('CHECK:Not all cand h5s are created')
-
-#check if h5s exist.
-#if os.path.isfile('*h5'):
-#    print('making h5s\n')
-#else:
-#    print("h5s are not created!\n")
 
 fetch_start=timer()
 print("FETCH:Preparing to run FETCH....\n")
