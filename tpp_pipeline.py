@@ -1,22 +1,13 @@
 #!/usr/bin/env python3
+
+
 """
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
 searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
 adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
 FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
 
->>>>>>> a9b6c24f7fa766ba933855ccec89f804c1c323b6
 Print statements are to help with logging. Time commands too.
-=======
-Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
-searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
-adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
-FETCH uses model a and a probability of 0.2. Subbanded search is not yet implemented.
-  
-""" 
 
 #logger = logging.getLogger(__name__) # Need to dig into this; what does it do? Is it necessary?
 #logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
@@ -24,7 +15,7 @@ FETCH uses model a and a probability of 0.2. Subbanded search is not yet impleme
 #logging.info('So should this')
 #logging.warning('And this, too')
 #logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
-"""
+
 On the use of logging:
  - "debug" tag will be used for writing information that will be put into the database manager.
  - "info" will report status.
