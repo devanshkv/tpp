@@ -24,7 +24,6 @@ On the use of logging:
 This way, a database-ingestion script can easily scan and interpret logs.
 """
 
-
 import argparse
 import glob
 import your
@@ -42,8 +41,9 @@ import pandas as pd
 #    debug (for timestamp checks or other temp debugging)
 #    error (self explanatory)
 import logging
+logging.basicConfig(format='%(asctime)s  %(levelname)s: %(message)s',datefmt='%m-%d-%Y_%H:%M:%S')
 logger = logging.getLogger(__name__)
-logger.setLevel(20)
+logger.setLevel(logging.INFO)
 
 parser = argparse.ArgumentParser(
     prog="tpp_pipeline.py",
@@ -62,76 +62,102 @@ parser.add_argument(
     "--tpp_db",
     help="Turn on updating to database manager. THIS IS FOR TPP OFFICIAL USE ONLY. To avoid mistaken turn-on, you must include the following argument to turn it on for real: mastersword",
     required=False,
-    nargs="+",
 )
+parser.add_argument(
+    "-v",
+    "--verbose",
+    help="Turn on DEBUG-level (general) logging.",
+    required=False,
+    action='store_true'
+)
+### We can optionally add another layer of verbosity if we feel it's needed.
+#parser.add_argument(
+#    "-V",
+#    "--vverbose",
+#    help="Turn on DEBUG-level (all) logging.",
+#    required=False,
+#    action='store_true'
+#)
 values = parser.parse_args() 
+
+
+# Check logging level
+if (values.verbose):
+    logger.setLevel(logging.DEBUG)
+#elif (values.verbose):
+#    logger.setLevel(logging.INFO)
+
+
+# For some reason the below line needs to be included for logging to
+# function hereafter... haven't figured out why. - SBS
+logging.info("(This current line is of no consequence)")
 
 
 # Read and check data files
 your_files = Your(values.files)
-logging.info("Reading raw data from "+str(values.files)+"\n")
+logger.info("Reading raw data from "+str(values.files))
 
 center_freq=your_files.your_header.center_freq
-logging.info("The center frequency is "+str(center_freq)+" MHz\n")
+logger.info("The center frequency is "+str(center_freq)+" MHz")
 
 bw=your_files.your_header.bw
-logging.info("The bandwidth is "+str(bw)+" MHz\n")
+logger.info("The bandwidth is "+str(bw)+" MHz")
 
 tsamp=your_files.your_header.native_tsamp
-logging.info("The native sampling time is "+str(tsamp)+" s\n")
+logger.info("The native sampling time is "+str(tsamp)+" s")
 
 obs_len = your_files.your_header.native_nspectra*tsamp
 if obs_len >= 60:
     obs_len_min = obs_len/60
-    logging.info("Dataset length is "+str(obs_len_min)+" minutes\n")
+    logger.info("Dataset length is "+str(obs_len_min)+" minutes")
 else:
-    logging.info("Dataset length is "+str(obs_len)+" seconds\n")
+    logger.info("Dataset length is "+str(obs_len)+" seconds")
 
 
 
 # Check Database Manager connection request
-if (values.tpp_db):
+print ("my value is "+str(values.tpp_db))
+db_on = False
+if values.tpp_db is not None:
     db_password = values.tpp_db
-
     if (db_password != "mastersword"):
-        logging.warn("******************************************************************")
-        logging.warn("***** It looks like you tried to turn on the TPP Manager but *****")
-        logging.warn("*****        provided the wrong password. Exiting now.       *****")
-        logging.warn("******************************************************************")
+        logger.error("******************************************************************")
+        logger.error("***** It looks like you tried to turn on the TPP Manager but *****")
+        logger.error("*****        provided the wrong password. Exiting now.       *****")
+        logger.error("******************************************************************")
         exit()
-    else:
-        logging.warn("******************************************************************")
-        logging.warn("*****Pipeline results will be pushed to TPP Database Manager.*****")
-        logging.warn("*****      If this is unintentional, abort your run now.     *****")
-        logging.warn("******************************************************************")
+    elif (db_password == "mastersword"):
+        logger.warning("******************************************************************")
+        logger.warning("*****Pipeline results will be pushed to TPP Database Manager.*****")
+        logger.warning("*****      If this is unintentional, abort your run now.     *****")
+        logger.warning("******************************************************************")
         db_on = True
 else:
-    logging.info("No connections will be made to TPP Database Manager.")
+    logger.info("No connections will be made to TPP Database Manager.")
     db_on = False
-
-
 
 
 
 #Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
 
-logging.info('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
+logger.info('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
+
 
 writer_start=timer()
 writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
 subprocess.call(writer_cmd,shell=True)
 writer_end=timer()
-logging.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
+logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
 
 '''
 
 # Running DDplan.py
 if center_freq<1000: 
-    logging.warn("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
+    logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
     ddplan_cmd="DDplan.py -o "+your_files.your_header.basename+"_ddplan -l 0 -d 3600 -f "+str(center_freq)+ " -b "+str(np.abs(bw))+ " -n "+str(your_files.your_header.native_nchans)+ " -t"+str(tsamp)+" -w >"+ your_files.your_header.basename+"_ddplan.txt" 
     subprocess.call(ddplan_cmd,shell=True)
-    logging.info('DDplan completed. A text file is created\n')
+    logger.info('DDplan completed. A text file is created\n')
     # Read the input from the text file and decimate. To be fixed....
     deci_cmd="decimate *fil -t 2 -c 1 >"+str(your_files.your_header.basename)+"_decimated.fil" 
     subprocess.call(deci_cmd,shell=True)
@@ -141,8 +167,8 @@ if center_freq<1000:
 # Running heimdall
 heimdall_start=timer()
 your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
-logging.info("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
-logging.info("HEIMDALL:Preparing to run Heimdall..\n")
+logger.info("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
+logger.info("HEIMDALL:Preparing to run Heimdall..\n")
 def dm_max(obslen,f_low,f_high):
     dm_h=(obslen*10**3/4.15)*(1/((1/f_low**2)-(1/f_high**2)))
     return dm_h
@@ -152,22 +178,22 @@ max_heimdall_dm=int(min(dm_max(obs_len,f_low,f_high),10000))
 heimdall_cmd = "your_heimdall.py -f "+ your_fil_object.your_header.filename+" -dm 0 " + str(max_heimdall_dm) 
 subprocess.call(heimdall_cmd,shell=True)
 heimdall_end=timer()
-logging.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
+logger.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
 
 
 # go to the new directory with the heimdall cands
 cand_dir=os.chdir(os.getcwd()
         + "/"
         + your_fil_object.your_header.basename)
-logging.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
+logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
 
-logging.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
+logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
 fil_file=your_fil_object.your_header.filename
 os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
 candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
 num_cands=str(candidates.shape[0])
-logging.info('CHECK:Number of candidates created = '+num_cands)
+logger.info('CHECK:Number of candidates created = '+num_cands)
 
 #Create a directory for the h5s
 try:
@@ -184,7 +210,7 @@ NOTE IT IS HERE THAT WE NEED TO DO COORDINATE CORRECTION FOR DRIFTSCAN DATA
 
 
 candmaker_start=timer()
-logging.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
+logger.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
 if your_fil_object.your_header.nchans <= 256:
 	gg=-1
 else:
@@ -192,10 +218,10 @@ else:
 candmaker_cmd ="your_candmaker.py -c *csv -g "+str(gg)+" -n 4 -o ./h5/"
 subprocess.call(candmaker_cmd,shell=True)
 candmaker_end=timer()
-logging.debug('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
+logger.debug('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
 
 os.chdir(os.getcwd()+'/h5')
-logging.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
+logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
 dir_path='./'
 count = 0
@@ -205,21 +231,21 @@ for path in os.listdir(dir_path):
 num_h5s = count-1   #subracting the log file
 
 if int(num_h5s)==int(num_cands):
-    logging.debug('CHECK:All candidiate h5s created')
+    logger.debug('CHECK:All candidiate h5s created')
 else:
-    logging.debug('CHECK:Not all cand h5s are created')
+    logger.debug('CHECK:Not all cand h5s are created')
 
 fetch_start=timer()
-logging.info("FETCH:Preparing to run FETCH....\n")
+logger.info("FETCH:Preparing to run FETCH....\n")
 fetch_cmd='predict.py -c . -m a -p 0.2'
 subprocess.call(fetch_cmd,shell=True)
 fetch_end=timer()
-logging.debug('FETCH: predict.py took '+str(fetch_end-fetch_start)+' s')
+logger.debug('FETCH: predict.py took '+str(fetch_end-fetch_start)+' s')
 if os.path.isfile('results_a.csv'):
-	logging.info('FETCH: FETCH ran successfully')
+	logger.info('FETCH: FETCH ran successfully')
 	plotter_cmd="your_h5plotter.py -c results_a.csv"
 	subprocess.call(plotter_cmd,shell=True)
 
 else:
-	logging.warn('FETCH:FETCH did not create a csv file')
+	logger.warning('FETCH:FETCH did not create a csv file')
 exit()
