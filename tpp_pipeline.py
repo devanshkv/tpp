@@ -9,13 +9,6 @@ FETCH uses model a and a probability of 0.1. Subbanded search is not yet impleme
 
 Print statements are to help with logging. Time commands too.
 
-#logger = logging.getLogger(__name__) # Need to dig into this; what does it do? Is it necessary?
-#logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.DEBUG)
-#logging.debug('This message should go to the log file')
-#logging.info('So should this')
-#logging.warning('And this, too')
-#logging.error('And non-ASCII stuff, too, like Øresund and Malmö')
-
 On the use of logging:
  - "debug" tag will be used for writing information that will be put into the database manager.
  - "info" will report status.
@@ -70,26 +63,17 @@ parser.add_argument(
     required=False,
     action='store_true'
 )
-### We can optionally add another layer of verbosity if we feel it's needed.
-#parser.add_argument(
-#    "-V",
-#    "--vverbose",
-#    help="Turn on DEBUG-level (all) logging.",
-#    required=False,
-#    action='store_true'
-#)
+
+
+
 values = parser.parse_args() 
 
 
 # Check logging level
 if (values.verbose):
     logger.setLevel(logging.DEBUG)
-#elif (values.verbose):
-#    logger.setLevel(logging.INFO)
-
-
-# For some reason the below line needs to be included for logging to
-# function hereafter... haven't figured out why. - SBS
+    # For some reason the below line needs to be included for logging to
+    # function hereafter... haven't figured out why. - SBS
 logging.info("(This current line is of no consequence)")
 
 
@@ -135,6 +119,11 @@ if values.tpp_db is not None:
 else:
     logger.info("No connections will be made to TPP Database Manager.")
     db_on = False
+
+
+#TPPDB
+ 
+
 
 
 
@@ -215,7 +204,7 @@ if your_fil_object.your_header.nchans <= 256:
 	gg=-1
 else:
 	gg=0 
-candmaker_cmd ="your_candmaker.py -c *csv -g "+str(gg)+" -n 4 -o ./h5/"
+candmaker_cmd ="your_candmaker.py -v -c *csv -g "+str(gg)+" -n 4 -o ./h5/"
 subprocess.call(candmaker_cmd,shell=True)
 candmaker_end=timer()
 logger.debug('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
@@ -237,7 +226,7 @@ else:
 
 fetch_start=timer()
 logger.info("FETCH:Preparing to run FETCH....\n")
-fetch_cmd='predict.py -c . -m a -p 0.2'
+fetch_cmd='predict.py -v -c . -m a -p 0.2'
 subprocess.call(fetch_cmd,shell=True)
 fetch_end=timer()
 logger.debug('FETCH: predict.py took '+str(fetch_end-fetch_start)+' s')
