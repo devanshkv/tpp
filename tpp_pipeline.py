@@ -17,6 +17,8 @@ On the use of logging:
 This way, a database-ingestion script can easily scan and interpret logs.
 """
 
+#TPPDB: determine job start
+
 import argparse
 import glob
 import your
@@ -121,16 +123,21 @@ else:
     db_on = False
 
 
-#TPPDB
- 
+#TPPDB: Update job_start based on previously determined info
+#TPPDB: DETERMINE NODE NAME, submit to OUTCOMES node_name
+#TPPDB: Determine current working directory, submit to OUTCOMES working_directory
 
 
-
-
-#Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
+#Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
 
 logger.info('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
 
+#TPPDB: update job_state_time to current time.
+#TPPDB: update job_state to "your_writer"
+
+
+#TPPDB: Somewhere here (probably in your_writer.py) we will have to
+#TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
 writer_start=timer()
 writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
@@ -153,7 +160,11 @@ if center_freq<1000:
 
 '''
 
+
 # Running heimdall
+#TPPDB: update job_state_time to current time.
+#TPPDB: update job_state to "heimdall"
+
 heimdall_start=timer()
 your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
 logger.info("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
@@ -171,6 +182,9 @@ logger.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)
 
 
 # go to the new directory with the heimdall cands
+#TPPDB: update job_state_time to current time.
+#TPPDB: update job_state to "candcsvmaker"
+
 cand_dir=os.chdir(os.getcwd()
         + "/"
         + your_fil_object.your_header.basename)
@@ -183,6 +197,12 @@ os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
 candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
 num_cands=str(candidates.shape[0])
 logger.info('CHECK:Number of candidates created = '+num_cands)
+
+#TPPDB: I think this is a good place to determine and update 
+#TPPDB: fetch_histogram (or perhaps we can get candcsvmaker to report it to
+#TPPDB: avoid re-reading the csv file). Same goes for n_members,
+#TPPDB: n_detections, n_candidates. I think we could easily add an accounting
+#TPPDB: of those things all into candcsvmaker.py.
 
 #Create a directory for the h5s
 try:
@@ -197,6 +217,9 @@ NOTE IT IS HERE THAT WE NEED TO DO COORDINATE CORRECTION FOR DRIFTSCAN DATA
 """
 
 
+
+#TPPDB: update job_state_time to current time.
+#TPPDB: update job_state to "Beginning your_candmaker"
 
 candmaker_start=timer()
 logger.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
@@ -224,6 +247,9 @@ if int(num_h5s)==int(num_cands):
 else:
     logger.debug('CHECK:Not all cand h5s are created')
 
+#TPPDB: update job_state_time to current time.
+#TPPDB: update job_state to "Beginning fetch"
+
 fetch_start=timer()
 logger.info("FETCH:Preparing to run FETCH....\n")
 fetch_cmd='predict.py -v -c . -m a -p 0.2'
@@ -232,9 +258,23 @@ fetch_end=timer()
 logger.debug('FETCH: predict.py took '+str(fetch_end-fetch_start)+' s')
 if os.path.isfile('results_a.csv'):
 	logger.info('FETCH: FETCH ran successfully')
-	plotter_cmd="your_h5plotter.py -c results_a.csv"
+        
+        #TPPDB: update job_state_time to current time.
+        #TPPDB: update job_state to "Beginning your_h5plotter"
+
+        plotter_cmd="your_h5plotter.py -c results_a.csv"
 	subprocess.call(plotter_cmd,shell=True)
 
 else:
 	logger.warning('FETCH:FETCH did not create a csv file')
+
+#TPPDB: Determine output directory and submit to OUTCOMES
+#TPPDB: output_directory? --- we will not do this here if the job launcher
+#TPPDB: handles the transfer and disk management.
+
+#TPPDB: at any point of failure above, the job_end should be updated and job_state should be updated to "ERROR: " with a relevant message.
+
+#TPPDB: update job_state_time to current time.
+#TPPDB: update job_end to current time.
+#TPPDB: update job_state to "completed"
 exit()
