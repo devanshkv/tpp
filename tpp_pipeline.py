@@ -85,9 +85,9 @@ def do_your_candmaker(your_fil_object):
     candmaker_start=timer()
     logger.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
     if your_fil_object.your_header.nchans <= 256:
-	gg=-1
+        gg = -1
     else:
-	gg=0 
+        gg = 0 
     candmaker_cmd ="your_candmaker.py -v -c *csv -g "+str(gg)+" -n 4 -o ./h5/"
     subprocess.call(candmaker_cmd,shell=True)
     candmaker_end=timer()
@@ -209,9 +209,10 @@ if __name__ == "__main__":
     #Determine node_name and current working directory
     node_name = os.uname()[1]
     cwd = os.getcwd()
-    logger.info("Processing started processing in directory "+str(cwd)+" on node "+str(node_name)+" at UTC "+str(time_start_UTC))
+    logger.info("Processing in directory "+str(cwd)+" on node "+str(node_name)+", began at UTC "+str(time_start_UTC))
 
     if (db_on):
+        tpp_state("started")
         # TPPDB_PUSH:
         #   time_start_UTC: Update job_start based on previously determined "time_start_UTC"
         #   time_now to time_start_UTC
@@ -386,8 +387,8 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
         
         
     if os.path.isfile('results_a.csv'):
-	logger.info('FETCH: FETCH ran successfully')        
-
+        logger.info('FETCH: FETCH ran successfully')
+        
         try:
             do_your_h5plotter()
         except Exception as error:
@@ -403,7 +404,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
         #TPPDB: range/format issues here and report them appropriately.
         
     else:
-	logger.warning('FETCH:FETCH did not create a csv file')
+        logger.warning('FETCH:FETCH did not create a csv file')
 
     #TPPDB: Determine output directory and submit to OUTCOMES
     #TPPDB: output_directory? --- we will not do this here if the job launcher
