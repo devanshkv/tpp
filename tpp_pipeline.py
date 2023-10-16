@@ -18,6 +18,9 @@ This way, a database-ingestion script can easily scan and interpret logs.
 """
 
 #TPPDB: determine job start
+from datetime import datetime
+time_start_UTC = datetime.utcnow()
+
 
 import argparse
 import glob
@@ -39,6 +42,10 @@ import logging
 logging.basicConfig(format='%(asctime)s  %(levelname)s: %(message)s',datefmt='%m-%d-%Y_%H:%M:%S')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+# For some reason the below line needs to be included for logging to
+# function hereafter... haven't figured out why. - SBS
+logging.info("(This current line is of no consequence)")
+
 
 parser = argparse.ArgumentParser(
     prog="tpp_pipeline.py",
@@ -65,7 +72,6 @@ parser.add_argument(
     required=False,
     action='store_true'
 )
-
 
 
 values = parser.parse_args() 
@@ -123,27 +129,38 @@ else:
     db_on = False
 
 
-#TPPDB: Update job_start based on previously determined info
-#TPPDB: DETERMINE NODE NAME, submit to OUTCOMES node_name
-#TPPDB: Determine current working directory, submit to OUTCOMES working_directory
+#TPPDB: Determine node_name and current working directory
+node_name = os.uname()[1]
+cwd = os.getcwd()
+logger.info("Processing started processing in directory "+str(cwd)+" on node "+str(node_name)+" at UTC "+str(time_start_UTC))
+# TPPDB_PUSH:
+#   time_start_UTC: Update job_start based on previously determined "time_start_UTC"
+#   time_now to time_start_UTC
+#   node_name: TPPDB: DETERMINE NODE NAME, submit to OUTCOMES node_name
+#   current_working_directory: TPPDB: Determine current working directory, submit to OUTCOMES working_directory
 
 
+############## ############## ############## 
+##############  YOUR_WRITER   ############## 
+############## ############## ############## 
 #Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
 
 logger.info('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
 
-#TPPDB: update job_state_time to current time.
-#TPPDB: update job_state to "your_writer"
-
-
-#TPPDB: Somewhere here (probably in your_writer.py) we will have to
-#TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
+#!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
+#!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
+time_now = datetime.now()
+#TPPDB PUSH:
+#   time_now: update job_state_time to value of "time_now".
+#   job_state: update to value string "your_writer"
 
 writer_start=timer()
 writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
 subprocess.call(writer_cmd,shell=True)
 writer_end=timer()
 logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
+
+
 
 '''
 
@@ -161,9 +178,15 @@ if center_freq<1000:
 '''
 
 
-# Running heimdall
-#TPPDB: update job_state_time to current time.
-#TPPDB: update job_state to "heimdall"
+
+
+############## ############## ############## 
+##############    HEIMDALL    ############## 
+############## ############## ############## 
+time_now = datetime.now()
+#TPPDB PUSH:
+#   time_now: update job_state_time to value of "time_now".
+#   job_state: update to value string "heimdall"
 
 heimdall_start=timer()
 your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
@@ -181,10 +204,18 @@ heimdall_end=timer()
 logger.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
 
 
-# go to the new directory with the heimdall cands
-#TPPDB: update job_state_time to current time.
-#TPPDB: update job_state to "candcsvmaker"
 
+
+
+############## ############## ############## 
+##############  CANDCSVMAKER  ############## 
+############## ############## ############## 
+time_now = datetime.now()
+#TPPDB PUSH:
+#   job_state_time: update job_state_time to value of "time_now".
+#   job_state: update to value string "candcsvmaker"
+
+# Go to the new directory with the heimdall cands
 cand_dir=os.chdir(os.getcwd()
         + "/"
         + your_fil_object.your_header.basename)
@@ -194,11 +225,15 @@ logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
 fil_file=your_fil_object.your_header.filename
 os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
+#!RESHMA: Do we really need to include the pandas package just to read a csv? I wonder if we could avoid this dependancy and use something more common/portable. Or do you feel pandas is a good way to go?
 candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
 num_cands=str(candidates.shape[0])
 logger.info('CHECK:Number of candidates created = '+num_cands)
 
-#TPPDB: I think this is a good place to determine and update 
+
+
+
+#!HTPPDB: I think this is a good place to determine and update 
 #TPPDB: fetch_histogram (or perhaps we can get candcsvmaker to report it to
 #TPPDB: avoid re-reading the csv file). Same goes for n_members,
 #TPPDB: n_detections, n_candidates. I think we could easily add an accounting
@@ -213,13 +248,18 @@ except FileExistsError:
 """
 
 NOTE IT IS HERE THAT WE NEED TO DO COORDINATE CORRECTION FOR DRIFTSCAN DATA
-
+!!!
 """
 
 
 
-#TPPDB: update job_state_time to current time.
-#TPPDB: update job_state to "Beginning your_candmaker"
+############## ############## ############## 
+############## YOUR_CANDMAKER ############## 
+############## ############## ############## 
+time_now = datetime.now()
+#TPPDB PUSH:
+#   job_state_time: update job_state_time to value of "time_now".
+#   job_state: update to value string "your_candmaker"
 
 candmaker_start=timer()
 logger.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
@@ -247,8 +287,16 @@ if int(num_h5s)==int(num_cands):
 else:
     logger.debug('CHECK:Not all cand h5s are created')
 
-#TPPDB: update job_state_time to current time.
-#TPPDB: update job_state to "Beginning fetch"
+
+
+
+############## ############## ############## 
+##############     FETCH      ############## 
+############## ############## ############## 
+time_now = datetime.now()
+#TPPDB PUSH:
+#   job_state_time: update job_state_time to value of "time_now".
+#   job_state: update to value string "fetch"
 
 fetch_start=timer()
 logger.info("FETCH:Preparing to run FETCH....\n")
@@ -259,12 +307,24 @@ logger.debug('FETCH: predict.py took '+str(fetch_end-fetch_start)+' s')
 if os.path.isfile('results_a.csv'):
 	logger.info('FETCH: FETCH ran successfully')
         
-        #TPPDB: update job_state_time to current time.
-        #TPPDB: update job_state to "Beginning your_h5plotter"
+
+        ############## ############## ############## 
+        ##############   H5 PLOTTER   ############## 
+        ############## ############## ############## 
+        time_now = datetime.now()
+        #TPPDB PUSH:
+        #   job_state_time: update job_state_time to value of "time_now".
+        #   job_state: update to value string "your_h5plotter"
+        
 
         plotter_cmd="your_h5plotter.py -c results_a.csv"
 	subprocess.call(plotter_cmd,shell=True)
 
+        #!H TPPDB: gather all relevant info for RESULTS and push every
+        #TPPDB: detection to database. Is there a way to do this in bulk?
+        #TPPDB: ---ask Bikash. We will need to make sure we catch
+        #TPPDB: range/format issues here and report them appropriately.
+        
 else:
 	logger.warning('FETCH:FETCH did not create a csv file')
 
@@ -274,7 +334,14 @@ else:
 
 #TPPDB: at any point of failure above, the job_end should be updated and job_state should be updated to "ERROR: " with a relevant message.
 
-#TPPDB: update job_state_time to current time.
-#TPPDB: update job_end to current time.
-#TPPDB: update job_state to "completed"
+
+############## ############## ############## 
+##############     WRAP-UP    ############## 
+############## ############## ############## 
+time_now = datetime.now()
+#TPPDB PUSH:
+#   job_state_time: update job_state_time to value of "time_now".
+#   job_end: update job_end to value of "time_now".
+#   job_state: update to value string "completed"
+
 exit()
