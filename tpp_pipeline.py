@@ -80,7 +80,7 @@ def do_candcsvmaker(your_fil_object):
     candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
     num_cands=str(candidates.shape[0])
     candcsvmaker_end = timer()
-    logger.debug('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
+    logger.debug('CANDMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
     return num_cands
 
 def do_your_candmaker(your_fil_object):
@@ -306,6 +306,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             tpp_state(status)
         else:
             print(error)
+            logger.debug(error)
      
     logger.info('CHECK:Number of candidates created = '+num_cands)
 
