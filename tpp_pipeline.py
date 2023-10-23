@@ -49,7 +49,7 @@ def do_RFI_filter(filenames,basename):
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
     writer_start=timer()
-    writer_cmd="your_writer.py -v -f"+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
+    writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
     logger.debug('WRITER: command = ' + writer_cmd)
     subprocess.call(writer_cmd,shell=True)
 #    writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
