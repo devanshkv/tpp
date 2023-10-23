@@ -43,14 +43,15 @@ def tpp_state(status):
     #   time_now: update job_state_time to value of "time_now".
     #   job_state: update to value string "status"
 
-def do_RFI_filter(filename,basename):
+def do_RFI_filter(filenames,basename):
     #Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
     #!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
     writer_start=timer()
-    writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
+    writer_cmd="your_writer.py -v -f"+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
     subprocess.call(writer_cmd,shell=True)
+#    writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
     writer_end=timer()
 
     logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
@@ -231,7 +232,7 @@ if __name__ == "__main__":
         tpp_state("your_writer")
 
     try:
-        do_RFI_filter(your_files.your_header.filename,your_files.your_header.basename)
+        do_RFI_filter(your_files,your_files.your_header.basename)
     except Exception as error:
         if (db_on):
             status = "ERROR in your_writer: "+error
