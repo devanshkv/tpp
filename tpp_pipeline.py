@@ -109,7 +109,7 @@ def do_your_h5plotter():
     plotter_cmd="your_h5plotter.py -c results_a.csv"
     subprocess.call(plotter_cmd,shell=True)
     h5_end=timer()
-    logger.debug('YOUR_H5PLOTTER: Took '+str(fetch_end-fetch_start)+' s') 
+    logger.debug('YOUR_H5PLOTTER: Took '+str(h5_end-h5_start)+' s') 
         
 if __name__ == "__main__":
     # Initiate Logging. Logging types  are:
