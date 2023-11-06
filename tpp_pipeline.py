@@ -49,11 +49,9 @@ def do_RFI_filter(filenames,basename):
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
     writer_start=timer()
-    writer_cmd="your_writer.py -v -f"+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
+    writer_cmd="your_writer.py -v -f"+namelist+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
     subprocess.call(writer_cmd,shell=True)
-#    writer_cmd="your_writer.py -v -f"+your_files.your_header.filename+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+your_files.your_header.basename+"_converted"
     writer_end=timer()
-
     logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
 
     return
@@ -183,6 +181,10 @@ if __name__ == "__main__":
     else:
         logger.info("Dataset length is "+str(obs_len)+" seconds")
 
+
+    #TPPDB: !!!!! May need to read declination from the TPPDB, not the file itself; Graham says that sometimes declination is listed with seconds>60. !!!!!!
+    
+    #TPPDB: !!!!! NEED TO ADD AN INTERNAL CHECK HERE TO MAKE SURE THAT THE DATA INFORMATION READ IS SANE!!!
 
 
     # Check Database Manager connection request
@@ -353,7 +355,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     if int(num_h5s)==int(num_cands):
         logger.debug('CHECK:All candidiate h5s created')
     else:
-        logger.debug('CHECK:Not all cand h5s are created')
+        logger.warning('POSSIBLE ISSUE: Not all cand h5s are created')
         #!RESHMA can you check if you agree that this is an exit-able offense?
         if (db_on):
             logger.error("ERROR in h5 file creation: Not all cand h5s were created.")
