@@ -49,7 +49,8 @@ def do_RFI_filter(filenames,basename):
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
     writer_start=timer()
-    writer_cmd="your_writer.py -v -f"+namelist+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
+    writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
+    logger.debug('WRITER: command = ' + writer_cmd)
     subprocess.call(writer_cmd,shell=True)
     writer_end=timer()
     logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
@@ -57,7 +58,7 @@ def do_RFI_filter(filenames,basename):
     return
 
 def do_heimdall(your_fil_object):
-    heimdall_start=timer(filename)
+    heimdall_start=timer()
     logger.info("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
     logger.info("HEIMDALL:Preparing to run Heimdall..\n")
     f_low=(center_freq+bw/2)*10**(-3) #in GHz
@@ -77,7 +78,7 @@ def do_candcsvmaker(your_fil_object):
     candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
     num_cands=str(candidates.shape[0])
     candcsvmaker_end = timer()
-    logger.debug('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
+    logger.debug('CANDMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
     return num_cands
 
 def do_your_candmaker(your_fil_object):
@@ -106,7 +107,7 @@ def do_your_h5plotter():
     plotter_cmd="your_h5plotter.py -c results_a.csv"
     subprocess.call(plotter_cmd,shell=True)
     h5_end=timer()
-    logger.debug('YOUR_H5PLOTTER: Took '+str(fetch_end-fetch_start)+' s') 
+    logger.debug('YOUR_H5PLOTTER: Took '+str(h5_end-h5_start)+' s') 
         
 if __name__ == "__main__":
     # Initiate Logging. Logging types  are:
@@ -164,6 +165,8 @@ if __name__ == "__main__":
     # Read and check data files
     your_files = Your(values.files)
     logger.info("Reading raw data from "+str(values.files))
+    filelist = your_files.your_header.filelist #list of filenames
+    filestring = ' '.join(filelist) #single string containing all file names
 
     center_freq=your_files.your_header.center_freq
     logger.info("The center frequency is "+str(center_freq)+" MHz")
@@ -188,7 +191,7 @@ if __name__ == "__main__":
 
 
     # Check Database Manager connection request
-    print ("my value is "+str(values.tpp_db))
+    logger.info("My database writer value is "+str(values.tpp_db))
     db_on = False
     if values.tpp_db is not None:
         db_password = values.tpp_db
@@ -234,15 +237,17 @@ if __name__ == "__main__":
         tpp_state("your_writer")
 
     try:
-        do_RFI_filter(your_files,your_files.your_header.basename)
+        do_RFI_filter(filestring,your_files.your_header.basename)
     except Exception as error:
         if (db_on):
             status = "ERROR in your_writer: "+error
             tpp_state(status)
         else:
             print(error)
+            logger.debug(error)
 
     your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
+    logger.debug('Writer done, moving on')
 
 
     ############## ############## ############## 
@@ -303,6 +308,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             tpp_state(status)
         else:
             print(error)
+            logger.debug(error)
      
     logger.info('CHECK:Number of candidates created = '+num_cands)
 
