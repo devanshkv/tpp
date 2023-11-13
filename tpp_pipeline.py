@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#g!/usr/bin/env python3
 
 
 """
@@ -51,7 +51,7 @@ def do_RFI_filter(filenames,basename):
     writer_start=timer()
     writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
     logger.debug('WRITER: command = ' + writer_cmd)
-    subprocess.call(writer_cmd,shell=True)
+   #subprocess.call(writer_cmd,shell=True)
     writer_end=timer()
     logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
 
@@ -65,7 +65,7 @@ def do_heimdall(your_fil_object):
     f_high=(center_freq-bw/2)*10**(-3) #in GHz
     max_heimdall_dm=int(min(dm_max(obs_len,f_low,f_high),10000))
     heimdall_cmd = "your_heimdall.py -f "+ your_fil_object.your_header.filename+" -dm 0 " + str(max_heimdall_dm) 
-    subprocess.call(heimdall_cmd,shell=True)
+    #subprocess.call(heimdall_cmd,shell=True)
     heimdall_end=timer()
     logger.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
 
@@ -73,7 +73,7 @@ def do_candcsvmaker(your_fil_object):
     candcsvmaker_start = timer()
     logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
     fil_file=your_fil_object.your_header.filename
-    os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
+    #os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
     #!RESHMA: Do we really need to include the pandas package just to read a csv? I wonder if we could avoid this dependancy and use something more common/portable. Or do you feel pandas is a good way to go?
     candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
     num_cands=str(candidates.shape[0])
@@ -89,7 +89,7 @@ def do_your_candmaker(your_fil_object):
     else:
         gg = 0 
     candmaker_cmd ="your_candmaker.py -v -c *csv -g "+str(gg)+" -n 4 -o ./h5/"
-    subprocess.call(candmaker_cmd,shell=True)
+    #subprocess.call(candmaker_cmd,shell=True)
     candmaker_end=timer()
     logger.debug('CANDMAKER: your_candmaker.py took '+ str(candmaker_end-candmaker_start)+' s')
 
@@ -247,6 +247,13 @@ if __name__ == "__main__":
             logger.debug(error)
 
     your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
+    #logger.info()
+    native_nspectra=your_files.your_header.native_nspectra
+    fil_nspectra=your_fil_object.your_header.native_nspectra
+    if native_nspectra==fil_nspectra:
+        logger.warning('All spectra written to Filterbank')
+    else:
+        logger.warning('Not all spectra is written to Filterbank')
     logger.debug('Writer done, moving on')
 
 
@@ -352,11 +359,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
     dir_path='./'
-    count = 0
-    for path in os.listdir(dir_path):
-        if os.path.isfile(os.path.join(dir_path, path)):
-            count += 1
-    num_h5s = count-1   #subracting the log file
+    num_h5s= len(glob.glob1(dir_path,"*.h5"))
 
     if int(num_h5s)==int(num_cands):
         logger.debug('CHECK:All candidiate h5s created')
@@ -366,7 +369,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
         if (db_on):
             logger.error("ERROR in h5 file creation: Not all cand h5s were created.")
             tpp_state("ERROR in h5 file creation: Not all cand h5s were created.")
-            exit()
+    
 
 
 
@@ -406,7 +409,13 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
                 tpp_state(status)
             else:
                 print(error)
-
+        fetchcsv=pd.read_csv('results_a.csv')
+        fetch_positives=np.where(fetchcsv['label']==1.0)[0].shape[0]
+        png_counter = len(glob.glob1(dir_path,"*.png"))
+        if fetch_positives==png_counter:
+                logger.debug('H5PLOTTER:All pngs are created')
+        else:
+                logger.warning('H5PLOTTER: Not all pngs are created')
         #!H TPPDB: gather all relevant info for RESULTS and push every
         #TPPDB: detection to database. Is there a way to do this in bulk?
         #TPPDB: ---ask Bikash. We will need to make sure we catch
