@@ -23,39 +23,133 @@ to be written by Joe Glaser). The purpose of this code is to:
 
 """
 
+# -----------------------------------------------
+# General Module Imports
+# -----------------------------------------------
 import requests   # Allow communications with TPP-DB API.
 import subprocess # To call sbatch/slurm.
 import yaml       # For reading private authentication data.
+import globus_sdk as globus
+from globus_sdk.scopes import TransferScopes
+import argparse
 
+def manage_single_transfer(transfer_client, src, dest, src_location, dest_location):
+    # Initiate Transfer using TransferClient
+    task_data = globus.TransferData(source_endpoint=src, destination_endpoint=dest)
+    task_data.add_item(src_location, dest_location)
+    task_session = transfer_client.submit_transfer(task_data)
+    task_id = task_session["task_id"]
+    print(f"Submitted Transfer under Transfer ID: {task_id}")
 
-# Data ID requested by user (unique identifier in DM of file to be processed).
-data_id = ""###### NEED TO FIX THIS - JOE TO BUILD.
-config_file = ""###### NEED TO FIX THIS ONCE SETUP FILE IS DONE.
+    # Wait Until the Transfer is Complete (Time in Seconds)
+    while not tc.task_wait(task_id, timeout=43200, polling_interval=15):
+        print(".", end="")
+    print(f"\n Transfer {task_id} has completed the following transfers:")
+    for info in tc.task_successful_transfers(task_id):
+        print(f"     {info['source_path']} ---> {info['destination_path']}")
 
-# Read config file for authentication info
-with open(config_file, 'r') as file:
-    authentication = yaml.safe_load(file)
+    # TODO: Verify the Transfer Completed Correctly, Retry Loop if there are Failures
 
-config = "/Users/sbs/soft/tpp/myconf.yml" ###### NEED TO FIX THIS
-tppdb_ip = authentication['tpp-db']['url']
-tppdb_port = authentication['tpp-db']['port']
-user_token = authentication['tpp-db']['token']
-globus_token = authentication['globus']['token']
+# -----------------------------------------------
+# BEGIN MAIN LOOP
+# -----------------------------------------------
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Launches the TPP pipeline.")
+    parser.add_argument('--data_id', '-d', dest='data_id', type=int, default=None,
+                        help="The Unique Data Identifier for the file to be processed by the pipeline.")
+    parser.add_argument('--config', '-c', dest='config_file', type=str, default=None,
+                        help="The user-specific Configuration File required for the pipeline.")
+    args= parser.parse_args()
 
+    # -----------------------------------------------
+    # Data Identifier & Configuration File
+    # -----------------------------------------------
+    # Data ID requested by user (unique identifier in DM of file to be processed).
+    data_id = args.data_id
+    if data_id == None:
+        data_id = input("Please enter the Unique Data Identifier to be processed: ").strip()
 
-# Set up TPP-DB communications.
-tppdb_base = "http://" + tppdb_ip + ":" + tppdb_port
-tppdb_data = tppdb_base + "/data"
-headers = {"Authorization": f"Bearer{token}"}
+    # Configuration YAML provided by the user (contains tokens, networking settings, etc)
+    config_file = args.config_file
+    if config_file == None:
+        config_file = input("Please enter the absolute path of your TPP Configuration File: ").strip()
 
+    # Read config file for authentication info
+    with open(config_file, 'r') as file:
+        config = yaml.safe_load(file)
 
-# Get the location of DATA_ID from TPP-DB
-#### NOTE SARAH NEEDS TO ADD A COMMS FAILURE CHECK HERE. Do we want to write a subprocess elsewhere that does basic TPP-DB communications success checks?
-mydata = requests.get(tppdb_data + "/" + data_id, headers=headers).json()
-filename = mydata['location_on_filesystem']
+    # Set Required Variables
+    tppdb_ip = config['tpp-db']['url']
+    tppdb_port = config['tpp-db']['port']
+    user_token = config['tpp-db']['token']
 
+    # -----------------------------------------------
+    # GLOBUS Configuration
+    # -----------------------------------------------
 
-# Use command line to call slurm. 
-subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"Reshma\" --partition=thepartitiontouse --wrap=\"SINGULARITY CALL ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
+    # Requires Globus Authentication with West Virginia University as the IdP
+    CLIENT_ID = config['globus']['client_id']
+    auth_client = globus.NativeAppAuthClient(CLIENT_ID)
+    auth_client.oauth2_start_flow(refresh_tokens=True, requested_scopes=TransferScopes.all)
 
+    # Begin authorization via URL & User Input Code to Retrieve Token
+    ## TODO: Use the Refresh_Tokens to Enable SSO Authentication for 24-Hours
+    authorize_url = auth_client.oauth2_get_authorize_url()
+    print(f"Please go to this URL and login:\n\n{authorize_url}\n")
+    auth_code = input("Please enter the code here: ").strip()
+    tokens = auth_client.oauth2_exchange_code_for_tokens(auth_code)
+    transfer_tokens = tokens.by_resource_server["transfer.api.globus.org"]
 
+    # Construct the AccessTokenAuthorizer to Enable the TransferClient
+    tc = globus.TransferClient(authorizer=globus.AccessTokenAuthorizer(transfer_tokens["access_token"]))
+
+    # Set Up the Storage Collection and Compute Collection IDs
+    storage = config['globus']['storage_collection_id']
+    compute = config['globus']['compute_collection_id']
+
+    # -----------------------------------------------
+    # TPP-Database Communication Configuration
+    # -----------------------------------------------
+    tppdb_base = "http://" + tppdb_ip + ":" + tppdb_port
+    tppdb_data = tppdb_base + "/data"
+    headers = {"Authorization": f"Bearer{user_token}"}
+
+    # -----------------------------------------------
+    # Transfer Necessary Files to Compute FS
+    # -----------------------------------------------
+    # Get the location of DATA_ID on Storage from TPP-DB
+    ## TODO: Sarah needs to add a comms failure check at this point.
+    db_request = requests.get(tppdb_data + "/" + data_id, headers=headers).json()
+    stor_location = db_request['location_on_filesystem']
+
+    # Construct the Location on Compute FS
+    ## TODO: Finalize FS Structure on Compute
+    comp_location = config['globus']['compute_scratch_dir']+"BLAHBLAHBLAH"
+
+    # Transfer the Required files from Storage to Compute
+    manage_single_transfer(tc, storage, compute, stor_location, comp_location)
+
+    # -----------------------------------------------
+    # Launch the TPP Pipeline via the SLURM Command
+    # -----------------------------------------------
+
+    # Use command line to call slurm.
+    #subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"Reshma\" --partition=thepartitiontouse --wrap=\"SINGULARITY CALL ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
+
+    # Communicate to TPP-Database that the SLURM Job has been Launched
+
+    # Wait for Slurm Job to Complete, Alerting any Errors
+
+    # Communicate to TPP-Database the Final Status of SLURM Job
+
+    # -----------------------------------------------
+    # Transfer Products from Compute to Storage
+    # -----------------------------------------------
+    #Construct the Location on Compute FS of Products
+    comp_location = config['globus']['compute_scratch_dir']+"/BLAHBLAHBLAH"+".hdf5"
+
+    #Construct the Location on Storage FS of Products
+    stor_location = config['globus']['storage_result_dir']+"/BLAHBLAHBLAH"+".hdf5"
+
+    #Transfer the Final Products from Compute to Storage
+    manage_single_transfer(tc, compute, storage, comp_location, stor_location)

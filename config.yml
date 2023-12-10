@@ -7,4 +7,9 @@ tpp-db:
     port: "enter port number here"
 
 globus:
-    token: "enter your globus key here"
+    refresh_token: "enter your globus key here"
+    storage_collection_id: "d285fb00-e695-4f21-bfdb-d90485fab0c3"
+    compute_collection_id: "6b8a0d5a-3a26-4ca5-bca0-ce2ad9fa44d1"
+    compute_scratch_dir: "/gpfs/ds-scratch/jpg00017/tpp"
+    storage_result_dir: "/tingle/data/results"
+    client_id: "8449eed0-4cd0-451b-83a7-7d908fa3fe4f"
