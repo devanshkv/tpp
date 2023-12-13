@@ -32,6 +32,11 @@ from your.utils.misc import YourArgparseFormatter
 from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
+import database as db
+
+#TPPDB: Here we will need to add a line about importing the TPP database communications library.
+auth_info = None
+
 
 def dm_max(obslen,f_low,f_high):
     dm_h=(obslen*10**3/4.15)*(1/((1/f_low**2)-(1/f_high**2)))
@@ -39,14 +44,20 @@ def dm_max(obslen,f_low,f_high):
 
 def tpp_state(status):
     time_now = datetime.now()
+
+    data={"job_state_time":time_now,"job_state": status}
+
+    db.post(collection="processing_outcomes",json=data,auth_info = my_auth) #!H
     #TPPDB PUSH:
     #   time_now: update job_state_time to value of "time_now".
     #   job_state: update to value string "status"
-
+    # NEED TO ADD ERROR HANDLING HERE.
+    
 def do_RFI_filter(filenames,basename):
     #Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
     #!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
+    #!RESHMA We will need here to read the zap array and include it in the writer_cmd below.
 
     writer_start=timer()
     writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
@@ -207,6 +218,15 @@ if __name__ == "__main__":
             logger.warning("*****      If this is unintentional, abort your run now.     *****")
             logger.warning("******************************************************************")
             db_on = True
+
+            # Read and check database authorization
+            try:
+                global auth_info
+                auth_info = db.read_auth()
+                db.check_tpp_auth(auth_info)
+            except:
+                "ouch" #!H REPORT AS MAJOR FAILURE!!!! Note this exception shoudl really be caught at the launcher step and should never happen here. But we should have the slurm report this as an issue before processing starts. Pipe this to something in user's home directory called EXCEPTIONS?
+            
     else:
         logger.info("No connections will be made to TPP Database Manager.")
         db_on = False
@@ -224,6 +244,8 @@ if __name__ == "__main__":
         #   time_now to time_start_UTC
         #   node_name: TPPDB: DETERMINE NODE NAME, submit to OUTCOMES node_name
         #   current_working_directory: TPPDB: Determine current working directory, submit to OUTCOMES working_directory
+        data={"job_state_time":time_now,"job_state": status}
+        db.post(collection="processing_outcomes",json=data,auth_info = my_auth)                                              
 
 
     ############## ############## ############## 
@@ -430,3 +452,10 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     #    job_end: update job_end to value of "time_now".
     
     # (All done).
+
+
+    
+    #TPPDB PUSH: CHECK OUTPUT DIRECTORY AND TELL TPPDB what's the best location.
+    # Joe's thing: /tingle/data/results/survey/MJDint/####/(hd5 or png)
+
+    #TPPDB CHECK: read results document and double check everything exists and is populated.
