@@ -4,7 +4,11 @@ import yaml       # For reading private authentication data.
 
 auth_info = None
 
-def read_auth():
+
+#!H!H setup.py structure may render this subfunction unnecessary; if
+#     so, make sure that all references to read_config in this code are
+#     appropriately fixed.
+def read_config():
     """.
 
     Reads authentication data from config.yml file.
@@ -20,11 +24,21 @@ def read_auth():
     """
 
     # Read tpp-db authentication
-    config_file = "/Users/sbs/soft/tpp/config.yml" ###### !H NEED TO FIX THIS - Emmanuel knows how to deal with this
-
+    config_file = "/Users/sbs/soft/tpp/config.yml" ###### !H NEED TO FIX THIS and below references to config_file- Emmanuel knows how to deal with "general config loading as global variable for the whole code"
+    
     # Read config file for authentication info
-    with open(config_file, 'r') as file:
-        authentication = yaml.safe_load(file)
+    try:
+        with open(config_file, 'r') as file:
+            authentication = yaml.safe_load(file)
+    except FileNotFoundError:
+        print(traceback.format_exc())
+        print("BASIC TPP CODE SETUP ERROR!\n\tYou seem to not have a config.yml file in the expected\n\tplace: "+config_file+"\n\tOr, the file is for some reason unreadable.")
+        exit()
+        
+#    except:
+#        print(traceback.format_exc())
+#        print("BASIC TPP CODE SETUP ERROR! You seem to not have a config.yml file in the expected place, or the file is unreadable.")
+#        exit()
         
     tpp_user  = authentication['tpp-db']['user']
     tpp_pass  = authentication['tpp-db']['pass']
@@ -73,7 +87,7 @@ def check_tpp_auth(auth_info):
 
     return check_return_status(response)
 
-#!H!H Also, should auth_info be a global variable?
+
 #!H!H!H I think we need a tpp_wait that counts to a certain amount of time then times out and dies if it can't communicate with the database. This should probably go here in the post command (maybe callable as a separate thing).
 def post(collection,data,auth_info):
     """.
@@ -213,7 +227,7 @@ def gen_token(length=3650):
     """
 
     # Read config file for authentication info
-    auth = read_auth()
+    auth = read_config()
     tpp_token_call = auth['tpp_url'] + "token?=" + str(length)
     
     # Get the location of DATA_ID from TPP-DB
@@ -243,7 +257,7 @@ def gen_user(username,password):
     """
 
     # Read config file for IP/port info.
-    auth = read_auth()
+    auth = read_config()
 
     try:
         response = requests.post(auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
@@ -288,7 +302,7 @@ def gen_token(length=3650):
     """
 
     # Read config file for authentication info
-    auth = read_auth()
+    auth = read_config()
     tpp_token_call = auth['tpp_url'] + "token?=" + str(length)
     
     # Get the location of DATA_ID from TPP-DB
