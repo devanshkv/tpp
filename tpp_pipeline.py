@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#g!/usr/bin/env python3
 
 
 """
@@ -43,48 +43,60 @@ def tpp_state(status):
     #   time_now: update job_state_time to value of "time_now".
     #   job_state: update to value string "status"
 
-def do_RFI_filter(filenames,basename):
+def do_RFI_filter(filenames,basenames,your_object):
     #Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
     #!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
-    writer_start=timer()
-    writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
-    logger.debug('WRITER: command = ' + writer_cmd)
-    subprocess.call(writer_cmd,shell=True)
-    writer_end=timer()
-    logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
-
-    return
-
-def do_heimdall(your_fil_object):
+    mask_start=timer()
+    mask_cmd="your_rfimask.py -v -f "+str(filenames)+" -sk_sigma 4 -sg_sigma 4 -sg_frequency 15"
+    logger.debug('RFI MASK: command = ' + mask_cmd)
+    subprocess.call(mask_cmd,shell=True)
+    mask_end=timer()
+    logger.debug('RFI MASK: your_rfimask.py took '+str(mask_end-mask_start)+' s')
+    mask_basename=str(basenames)+'_your_rfi_mask'
+    killmask_file= f"{mask_basename}.bad_chans"
+    with open(killmask_file,'r') as myfile:
+    	file_str = myfile.read()
+    my_list = [] ##initializing a list
+    for chan in file_str.split(' '): ##using split function to split, the list.this splits the value in index specified and return the value.
+         my_list.append(chan)
+    for chan in my_list:
+    	 if chan == '':
+        	 my_list.remove(chan)
+    if len(my_list) == 0:
+         logger.info(f'RFI MASK: No channels zapped')
+    else:
+         logger.debug(f'RFI MASK: No: of channels zapped = {len(my_list)}')
+         logger.info('RFI MASK: Percentage of channels zapped = '+str((len(my_list)/your_object.your_header.nchans)*100)+' %') 
+   
+def do_heimdall(filenames,killmask):
     heimdall_start=timer()
-    logger.info("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
+    logger.info("HEIMDALL:Using the raw data from" + str(filenames)+" for Heimdall and using the RFI mask "+str(killmask))
     logger.info("HEIMDALL:Preparing to run Heimdall..\n")
     f_low=(center_freq+bw/2)*10**(-3) #in GHz
     f_high=(center_freq-bw/2)*10**(-3) #in GHz
     max_heimdall_dm=int(min(dm_max(obs_len,f_low,f_high),10000))
-    heimdall_cmd = "your_heimdall.py -f "+ your_fil_object.your_header.filename+" -dm 0 " + str(max_heimdall_dm) 
+    heimdall_cmd = "your_heimdall.py -f "+ str(filenames)+" -dm 0 " + str(max_heimdall_dm) +" -mask " + str(killmask)
     subprocess.call(heimdall_cmd,shell=True)
     heimdall_end=timer()
     logger.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
 
-def do_candcsvmaker(your_fil_object):
+def do_candcsvmaker(filenames,basenames,killmask):
     candcsvmaker_start = timer()
     logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
-    fil_file=your_fil_object.your_header.filename
-    os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
+    os.system('python ../candcsvmaker.py -v -f ../'+str(filenames)+' -c *cand -k ../'+str(killmask))
     #!RESHMA: Do we really need to include the pandas package just to read a csv? I wonder if we could avoid this dependancy and use something more common/portable. Or do you feel pandas is a good way to go?
-    candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
+    candidates=pd.read_csv(str(basenames)+".csv")
     num_cands=str(candidates.shape[0])
     candcsvmaker_end = timer()
     logger.debug('CANDMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
     return num_cands
 
-def do_your_candmaker(your_fil_object):
+def do_your_candmaker(your_object):
     candmaker_start=timer()
     logger.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
-    if your_fil_object.your_header.nchans <= 256:
+    if your_object.your_header.nchans <= 256:
         gg = -1
     else:
         gg = 0 
@@ -167,7 +179,7 @@ if __name__ == "__main__":
     logger.info("Reading raw data from "+str(values.files))
     filelist = your_files.your_header.filelist #list of filenames
     filestring = ' '.join(filelist) #single string containing all file names
-
+    basename=your_files.your_header.basename #basename of the files
     center_freq=your_files.your_header.center_freq
     logger.info("The center frequency is "+str(center_freq)+" MHz")
 
@@ -231,30 +243,37 @@ if __name__ == "__main__":
     ############## ############## ############## 
     # Runs RFI filtering; also converts psrfits-format files to an RFI-filtered filterbank-format file.
     
-    logger.info('WRITER:Preparing to run your_writer to convert the PSRFITS to FILTERBANK and to do RFI mitigation on the fly\n')
+    logger.info('RFI MASK:Preparing to run your_rfimask to create an RFI mask\n')
 
     if (db_on):
-        tpp_state("your_writer")
+        tpp_state("your_rfimask")
 
     try:
-        do_RFI_filter(filestring,your_files.your_header.basename)
+        do_RFI_filter(filestring,basename,your_files)
     except Exception as error:
         if (db_on):
-            status = "ERROR in your_writer: "+error
+            status = "ERROR in your_rfimask: "+error
             tpp_state(status)
         else:
             print(error)
             logger.debug(error)
-
-    your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
+    '''
+    #your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
+    #logger.info()
+    native_nspectra=your_files.your_header.native_nspectra
+    fil_nspectra=your_fil_object.your_header.native_nspectra
+    if native_nspectra==fil_nspectra:
+        logger.warning('All spectra written to Filterbank')
+    else:
+        logger.warning('Not all spectra is written to Filterbank')
     logger.debug('Writer done, moving on')
 
-
+  
     ############## ############## ############## 
     ##############     DDPLAN     ############## 
     ############## ############## ############## 
     # Will be used for low-frequency data.
-    '''
+
 
 # Running DDplan.py
 if center_freq<1000: 
@@ -266,20 +285,18 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     # Read the input from the text file and decimate. To be fixed....
     deci_cmd="decimate *fil -t 2 -c 1 >"+str(your_files.your_header.basename)+"_decimated.fil" 
     subprocess.call(deci_cmd,shell=True)
-
     '''
 
 
     ############## ############## ############## 
     ##############    HEIMDALL    ############## 
     ############## ############## ############## 
-
+    mask_basename=str(basename)+'_your_rfi_mask'
+    killmask_file= f"{mask_basename}.bad_chans"
     if (db_on):
         tpp_state("heimdall")
-
-
     try:
-        do_heimdall(your_fil_object)
+        do_heimdall(filestring,killmask_file)
     except Exception as error:
         if (db_on):
             status = "ERROR in heimdall: "+error
@@ -297,11 +314,11 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     # Go to the new directory with the heimdall cands
     cand_dir=os.chdir(os.getcwd()
                       + "/"
-                      + your_fil_object.your_header.basename)
+                      + str(basename))
     logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
     try:
-        num_cands = do_candcsvmaker(your_fil_object)
+        num_cands = do_candcsvmaker(filestring,basename,killmask_file)
     except Exception as error:
         if (db_on):
             status = "ERROR in candcsvmaker: "+error
@@ -339,7 +356,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
         tpp_state("your_candmaker")
 
     try:
-        do_your_candmaker(your_fil_object)
+        do_your_candmaker(your_files)
     except Exception as error:
         if (db_on):
             status = "ERROR in your_candmaker: "+error
@@ -352,11 +369,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
     dir_path='./'
-    count = 0
-    for path in os.listdir(dir_path):
-        if os.path.isfile(os.path.join(dir_path, path)):
-            count += 1
-    num_h5s = count-1   #subracting the log file
+    num_h5s= len(glob.glob1(dir_path,"*.h5"))
 
     if int(num_h5s)==int(num_cands):
         logger.debug('CHECK:All candidiate h5s created')
@@ -366,7 +379,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
         if (db_on):
             logger.error("ERROR in h5 file creation: Not all cand h5s were created.")
             tpp_state("ERROR in h5 file creation: Not all cand h5s were created.")
-            exit()
+    
 
 
 
@@ -406,7 +419,13 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
                 tpp_state(status)
             else:
                 print(error)
-
+        fetchcsv=pd.read_csv('results_a.csv')
+        fetch_positives=np.where(fetchcsv['label']==1.0)[0].shape[0]
+        png_counter = len(glob.glob1(dir_path,"*.png"))
+        if fetch_positives==png_counter:
+                logger.debug('H5PLOTTER:All pngs are created')
+        else:
+                logger.warning('H5PLOTTER: Not all pngs are created')
         #!H TPPDB: gather all relevant info for RESULTS and push every
         #TPPDB: detection to database. Is there a way to do this in bulk?
         #TPPDB: ---ask Bikash. We will need to make sure we catch
