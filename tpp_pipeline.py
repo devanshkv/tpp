@@ -35,7 +35,7 @@ import pandas as pd
 import database as db
 
 #TPPDB: Here we will need to add a line about importing the TPP database communications library.
-auth_info = None
+auth_info = db.auth_info # !H!H This needs to be fixed. Emmanuel indicated we can make a setup.py type file that will allow us to import all the config.yml info as global information when we "import database" or something. Need to check with him how we can then pull it into here.
 
 
 def dm_max(obslen,f_low,f_high):
@@ -225,12 +225,12 @@ if __name__ == "__main__":
                 auth_info = db.read_auth()
                 db.check_tpp_auth(auth_info)
             except:
-                "ouch" #!H REPORT AS MAJOR FAILURE!!!! Note this exception shoudl really be caught at the launcher step and should never happen here. But we should have the slurm report this as an issue before processing starts. Pipe this to something in user's home directory called EXCEPTIONS?
-            
+                print("ouch") #!H REPORT AS MAJOR FAILURE!!!! Note this exception shoudl really be caught at the launcher step and should never happen here. But we should have the slurm report this as an issue before processing starts. Pipe this to something in user's home directory called EXCEPTIONS?
+            #!H!H Need to adapt here once we get all the setup.py-style structure in place; ensure here if config.yml file does not exist or is unreadable, but communications are requested, that there is a failure.
     else:
         logger.info("No connections will be made to TPP Database Manager.")
         db_on = False
-
+        
 
     #Determine node_name and current working directory
     node_name = os.uname()[1]
