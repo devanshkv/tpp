@@ -1,72 +1,9 @@
 import traceback
 import requests   # Allow communications with TPP-DB API.
 import yaml       # For reading private authentication data.
-
-auth_info = None
-
-
-#!H!H setup.py structure may render this subfunction unnecessary; if
-#     so, make sure that all references to read_config in this code are
-#     appropriately fixed.
-def read_config():
-    """.
-
-    Reads authentication data from config.yml file.
-
-    Returns a dictionary:
-    tpp-token (long string)
-    tpp-ip (e.g. 123.45.67.890
-    tpp-port (e.g. 2000)
-    tpp-url (e.g. https://tpp-ip:tpp-port/)
-    tpp-headers (construct needed for communication)
-    globus-token (globus key; not sure of format)
-
-    """
-
-    # Read tpp-db authentication
-    config_file = "/Users/sbs/soft/tpp/config.yml" ###### !H NEED TO FIX THIS and below references to config_file- Emmanuel knows how to deal with "general config loading as global variable for the whole code"
-    
-    # Read config file for authentication info
-    try:
-        with open(config_file, 'r') as file:
-            authentication = yaml.safe_load(file)
-    except FileNotFoundError:
-        print(traceback.format_exc())
-        print("BASIC TPP CODE SETUP ERROR!\n\tYou seem to not have a config.yml file in the expected\n\tplace: "+config_file+"\n\tOr, the file is for some reason unreadable.")
-        exit()
-        
-#    except:
-#        print(traceback.format_exc())
-#        print("BASIC TPP CODE SETUP ERROR! You seem to not have a config.yml file in the expected place, or the file is unreadable.")
-#        exit()
-        
-    tpp_user  = authentication['tpp-db']['user']
-    tpp_pass  = authentication['tpp-db']['pass']
-    tpp_token = authentication['tpp-db']['token']
-    tpp_ip    = authentication['tpp-db']['ip']
-    tpp_port  = authentication['tpp-db']['port']
-    tpp_url = "http://" + tpp_ip + ":" + tpp_port + '/'
-    tpp_headers = {"Authorization": f"Bearer{tpp_token}"}
-
-    # Read globus authentication
-    globus_token = authentication['globus']['token']
-    
-    # Create dictionary for return.
-    mydict = {'tpp_user': tpp_user,
-              'tpp_pass': tpp_pass,
-              'tpp_token': tpp_token,
-              'tpp_ip': tpp_ip,
-              'tpp_port': tpp_port,
-              'tpp_url': tpp_url,
-              'tpp_headers': tpp_headers,
-              'globus_token': globus_token
-    }
-
-    #global auth_info
-    #auth_info = mydict
-
-    return mydict
-
+import config as db
+#from . import config as db
+#from tpp import infrastructure as db # Need to understand if this is the right thing to do and then replace the below instances of auth_info with db.auth
 
 def check_tpp_auth(auth_info):
     """.
@@ -206,7 +143,7 @@ def check_globus_auth(auth_info):
     return
 
 
-def gen_token(length=3650):
+def gen_token(auth_info,length=3650):
     """.
 
     Generate a TPP database token.
@@ -227,11 +164,11 @@ def gen_token(length=3650):
     """
 
     # Read config file for authentication info
-    auth = read_config()
-    tpp_token_call = auth['tpp_url'] + "token?=" + str(length)
+    #auth_info = read_config()
+    tpp_token_call = auth_info['tpp_url'] + "token?=" + str(length)
     
     # Get the location of DATA_ID from TPP-DB
-    token = requests.post(tpp_token_call, data = {"username":auth['tpp_user'],"password":auth['tpp_pass']}).json()['access_token']
+    token = requests.post(tpp_token_call, data = {"username":auth_info['tpp_user'],"password":auth_info['tpp_pass']}).json()['access_token']
     print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.\n")
     print("Make sure you add it in to your config.yml file.\n")
     
@@ -257,10 +194,10 @@ def gen_user(username,password):
     """
 
     # Read config file for IP/port info.
-    auth = read_config()
+    #auth = read_config()
 
     try:
-        response = requests.post(auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
+        response = requests.post(db.auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
         check_return_status(response)
 
         #!H!H
@@ -327,3 +264,70 @@ def print_comms_error():
     print("If your connection timed out or you got error 113:\n\tYou likely have the wrong IP/port in your config.yml\n\tfile; check it and confirm with Bikash/Sarah if needed.")
 
     return    
+
+
+
+
+
+#----------------------This code might not be needed-----------------------------
+#!H!H setup.py structure may render this subfunction unnecessary; if
+#     so, make sure that all references to read_config in this code are
+#     appropriately fixed.
+def read_config():
+    """.
+
+    Reads authentication data from config.yml file.
+
+    Returns a dictionary:
+    tpp-token (long string)
+    tpp-ip (e.g. 123.45.67.890
+    tpp-port (e.g. 2000)
+    tpp-url (e.g. https://tpp-ip:tpp-port/)
+    tpp-headers (construct needed for communication)
+    globus-token (globus key; not sure of format)
+
+    """
+
+    # Read tpp-db authentication
+    config_file = "/Users/sbs/soft/tpp/config.yml" ###### !H NEED TO FIX THIS and below references to config_file- Emmanuel knows how to deal with "general config loading as global variable for the whole code"
+    
+    # Read config file for authentication info
+    try:
+        with open(config_file, 'r') as file:
+            authentication = yaml.safe_load(file)
+    except FileNotFoundError:
+        print(traceback.format_exc())
+        print("BASIC TPP CODE SETUP ERROR!\n\tYou seem to not have a config.yml file in the expected\n\tplace: "+config_file+"\n\tOr, the file is for some reason unreadable.")
+        exit()
+        
+#    except:
+#        print(traceback.format_exc())
+#        print("BASIC TPP CODE SETUP ERROR! You seem to not have a config.yml file in the expected place, or the file is unreadable.")
+#        exit()
+        
+    tpp_user  = authentication['tpp-db']['user']
+    tpp_pass  = authentication['tpp-db']['pass']
+    tpp_token = authentication['tpp-db']['token']
+    tpp_ip    = authentication['tpp-db']['ip']
+    tpp_port  = authentication['tpp-db']['port']
+    tpp_url = "http://" + tpp_ip + ":" + tpp_port + '/'
+    tpp_headers = {"Authorization": f"Bearer{tpp_token}"}
+
+    # Read globus authentication
+    globus_token = authentication['globus']['token']
+    
+    # Create dictionary for return.
+    mydict = {'tpp_user': tpp_user,
+              'tpp_pass': tpp_pass,
+              'tpp_token': tpp_token,
+              'tpp_ip': tpp_ip,
+              'tpp_port': tpp_port,
+              'tpp_url': tpp_url,
+              'tpp_headers': tpp_headers,
+              'globus_token': globus_token
+    }
+
+    #global auth_info
+    #auth_info = mydict
+
+    return mydict
