@@ -1,14 +1,14 @@
 #g!/usr/bin/env python3
 
 
-"""
+""".
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
 searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
 adaptive scrunching on heimdall is enabled, candmaker runs on gpu 0, 
 FETCH uses model a and a probability of 0.1. Subbanded search is not yet implemented.
 
 Print statements are to help with logging. Time commands too.
-
+ 
 On the use of logging:
  - "debug" tag will be used for writing information that will be put into the database manager.
  - "info" will report status.
