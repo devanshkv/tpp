@@ -24,7 +24,7 @@ def post(collection,data):
     """
     try:
         collection_url = db.auth['tpp_url'] + str(collection)
-        print("I'll try requests.post("+collection_url+",json="+data+",headers="+db.auth['tpp_headers'])
+        print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+db.auth['tpp_headers'])
         response = requests.post(collection_url,json=data,headers=db.auth['tpp_headers'])
         check_return_status(response)
 
