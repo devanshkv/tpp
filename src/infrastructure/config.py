@@ -18,7 +18,7 @@ tpp_token = auth['tpp-db']['token']
 tpp_ip    = auth['tpp-db']['ip']
 tpp_port  = auth['tpp-db']['port']
 tpp_url = "http://" + tpp_ip + ":" + tpp_port + '/'
-tpp_headers = {"Authorization": f"Bearer{tpp_token}"}
+tpp_headers = {"Authorization": f"Bearer {tpp_token}"}
 
 # Read globus authentication
 globus_token   = auth['globus']['refresh_token']

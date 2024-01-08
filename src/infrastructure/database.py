@@ -24,8 +24,8 @@ def post(collection,data):
     """
     try:
         collection_url = db.auth['tpp_url'] + str(collection)
-        print("I'll try requests.post("+str(db.auth['tpp_url']) + str(collection)+",json="+data+",headers="+db.auth['tpp_headers'])
-        response = requests.post(db.auth['tpp_url'] + str(collection),json=data,headers=db.auth['tpp_headers'])
+        print("I'll try requests.post("+connection_url+",json="+data+",headers="+db.auth['tpp_headers'])
+        response = requests.post(connection_url,json=data,headers=db.auth['tpp_headers'])
         check_return_status(response)
 
     except LookupError:
@@ -42,6 +42,7 @@ def post(collection,data):
 
 
 #!H!H The long list of errors below aren't currently being passed properly.
+#Actually on 8 January they seem to be working well!!! I think the "raise" format allowed it to work appropriately.
 def check_return_status(response):
     """.
 
@@ -89,6 +90,8 @@ def check_return_status(response):
         raise LookupError("Error 405 Method Not Allowed: You're trying to use a method (push, get, delete) that's not allowed by the database. Double check with Bikash that what you're trying to do is valid.")
     elif (code_num == 408):
         raise LookupError("Error 408 Request Timeout: The database might be down. Please check with Bikash or Sarah B-S.")
+    elif (code_num == 422):
+        raise LookupError("Error 422 Unprocessable content: This usually means the 'data' you're submitting to TPP DB is out of expected range or of the wrong data type. Double check what you've submitted against the github or spreadsheet schema lists!")
     elif (code_num == 429):
         raise LookupError("Error 429 Too Many Requests: The TPP-database server is overloaded because you've sent too many requests in a short amount of time. Please wait before you try sending again.")
     elif (code_num == 451):
