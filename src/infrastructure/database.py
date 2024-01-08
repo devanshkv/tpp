@@ -24,8 +24,8 @@ def post(collection,data):
     """
     try:
         collection_url = db.auth['tpp_url'] + str(collection)
-        print("I'll try requests.post("+connection_url+",json="+data+",headers="+db.auth['tpp_headers'])
-        response = requests.post(connection_url,json=data,headers=db.auth['tpp_headers'])
+        print("I'll try requests.post("+collection_url+",json="+data+",headers="+db.auth['tpp_headers'])
+        response = requests.post(collection_url,json=data,headers=db.auth['tpp_headers'])
         check_return_status(response)
 
     except LookupError:
@@ -226,7 +226,8 @@ def print_comms_error():
 
     print(traceback.format_exc())
     print("BASIC DB COMMUNICATION ERROR! See traceback above.")
-    print("FIRST, CHECK:\n\tCheck that your config.yml file has the correct username,\n\tpassword, and token. It is also possible your token has\n\texpired and you need to generate a new one.\n")
+    print("FIRST, CHECK:\n\tDid you use a valid collection name? Check against the \n\tofficial collection names on the tpp_mongodb_fastapi github.")
+    print("SECOND, CHECK:\n\tCheck that your config.yml file has the correct username,\n\tpassword, and token. It is also possible your token has\n\texpired and you need to generate a new one.")
     print("If you got error 61:\n\tYou may be running on a computer that does not have\n\tdirect access to the TPP database node. Try running\n\tfrom Link.")
     print("If your connection timed out or you got error 113:\n\tYou likely have the wrong IP/port in your config.yml\n\tfile; check it and confirm with Bikash/Sarah if needed.")
     print("Finally:\n\tIt is possible that the TPP server is down. If you have\n\tchecked for the above errors and are still having trouble,\n\tplease contact Bikash/Sarah.")
