@@ -24,6 +24,7 @@ def post(collection,data):
     """
     try:
         collection_url = db.auth['tpp_url'] + str(collection)
+        print("I'll try requests.post("+str(db.auth['tpp_url']) + str(collection)+",json="+data+",headers="+db.auth['tpp_headers'])
         response = requests.post(db.auth['tpp_url'] + str(collection),json=data,headers=db.auth['tpp_headers'])
         check_return_status(response)
 
@@ -68,7 +69,7 @@ def check_return_status(response):
     if (code_num >= 200 and code_num < 300):
         # Response may have been fine even if there was a TPPDB-side internal error.
         if ('error' in response.json().keys()):
-            raise LookupError("\n\nA TPP DB internal error occurred: "+response.json()['error'])
+            raise LookupError("A TPP DB internal error occurred: "+response.json()['error'])
         elif ('message' in response.json().keys()):
             status = True
             db_reply = response.json()['message']
@@ -79,7 +80,7 @@ def check_return_status(response):
     elif (code_num == 400):
         raise LookupError("Error 400 Bad request; Check your data schema name or entry against the expected format.")
     elif (code_num == 401):
-        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid.\nPlease check the information your config.yml file and correct it (particularly TPP database username, password, token).")
+        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid. Please check the information your config.yml file and correct it (particularly TPP database username, password, token).")
     elif (code_num == 403):
         raise LookupError("Error 403 Forbidden; Your TPP database authentication information was valid, but for some reason you don't have permission to access the desired resource. Reach out to Bikash or Sarah B-S to proceed.")
     elif (code_num == 404):
@@ -116,7 +117,7 @@ def check_return_status(response):
         print ("Server responded OK. (Status "+str(status)+").")
         print ("Message from TPP database: "+str(db_reply))
     else:
-        raise LookupError("TPP DATABASE ERROR OCCURRED but I'm not sure how to diagnose it. Please contact Error Master Burke-Spolaor!\n")
+        raise LookupError("TPP DATABASE ERROR OCCURRED but I'm not sure how to diagnose it. Please contact Error Master Burke-Spolaor!")
 
     # Note it's not strictly neccessary to return anything here at all.
     return status
