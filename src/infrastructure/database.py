@@ -5,34 +5,15 @@ import config as db
 #from . import config as db
 #from tpp import infrastructure as db # Need to understand if this is the right thing to do and then replace the below instances of auth_info with db.auth
 
-def check_tpp_auth(auth_info):
-    """.
+#!H!H!H Exiting in the exceptions throughout here might not be desirable if we want to continue running the pipeline
 
-    Pings TPP database to verify authentication data. The ping is
-    actually reading the "versions" schema.
-
-    Input:
-        auth_info dictionary
-
-    Output: 
-        status:  boolean; true (good), false (fail)
-        message: None or String; error message, if any
-
-    """
-
-    response = requests.get(auth_info['tpp_url'], headers=auth_info['tpp_headers'])
-
-    return check_return_status(response)
 
 
 #!H!H!H I think we need a tpp_wait that counts to a certain amount of time then times out and dies if it can't communicate with the database. This should probably go here in the post command (maybe callable as a separate thing).
-def post(collection,data,auth_info):
+def post(collection,data):
     """.
     
     Pushes a piece of information to the database. 
-
-    Assumes that user authentication information has been pre-checked and
-    is valid.
 
     Input:
         database collection name, information
@@ -41,12 +22,25 @@ def post(collection,data,auth_info):
         status (failure,success) and error message if applicable.
 
     """
+    try:
+        collection_url = db.auth['tpp_url'] + str(collection)
+        response = requests.post(db.auth['tpp_url'] + str(collection),json=data,headers=db.auth['tpp_headers'])
+        check_return_status(response)
 
-    response = requests.post(auth_info['tpp_url'] + str(collection),json=data,headers=auth_info['tpp_url'])
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
+        
+    except:
+        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
+        print_comms_error()
+        exit()
     
-    return check_return_status(response)
+    return
 
 
+
+#!H!H The long list of errors below aren't currently being passed properly.
 def check_return_status(response):
     """.
 
@@ -65,8 +59,8 @@ def check_return_status(response):
     """
 
     # Default to failure. Guilty until proven innocent :(.
+    # Note I think the "status" relevance is now obsolete.
     status = False
-    #!H NEED TO FIX READING FORMAT OF RESPONSE.
 
     code_num = response.status_code
     
@@ -74,105 +68,61 @@ def check_return_status(response):
     if (code_num >= 200 and code_num < 300):
         # Response may have been fine even if there was a TPPDB-side internal error.
         if ('error' in response.json().keys()):
-            db_reply = "A TPP DB internal error occurred: "+response.json()['error']
+            raise LookupError("\n\nA TPP DB internal error occurred: "+response.json()['error'])
         elif ('message' in response.json().keys()):
             status = True
             db_reply = response.json()['message']
     elif (code_num == 61):
-        db_reply = "Error 61: If the traceback notes some kind of connection error, you may be running on a computer that does not have direct access to the TPP database node. Try running from Link."
+        raise LookupError("Error 61: If the traceback notes some kind of connection error, you may be running on a computer that does not have direct access to the TPP database node. Try running from Link.")
     elif (code_num == 113):
-        db_reply = "Error 113 No route to host; You likely have the wrong IP or port. Double check your config.yml file and if needed ask Bikash/Sarah B-S for the latest database IP/port."
+        raise LookupError("Error 113 No route to host; You likely have the wrong IP or port. Double check your config.yml file and if needed ask Bikash/Sarah B-S for the latest database IP/port.")
     elif (code_num == 400):
-        db_reply = "Error 400 Bad request; Check your data schema name or entry against the expected format."
+        raise LookupError("Error 400 Bad request; Check your data schema name or entry against the expected format.")
     elif (code_num == 401):
-        db_reply = "Error 401 Unauthorized; Your TPP database authentication information is invalid.\nPlease check the information your config.yml file and correct it."
+        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid.\nPlease check the information your config.yml file and correct it.")
     elif (code_num == 403):
-        db_reply = "Error 403 Forbidden; Your TPP database authentication information was valid, but for some reason you don't have permission to access the desired resource. Reach out to Bikash or Sarah B-S to proceed."
+        raise LookupError("Error 403 Forbidden; Your TPP database authentication information was valid, but for some reason you don't have permission to access the desired resource. Reach out to Bikash or Sarah B-S to proceed.")
     elif (code_num == 404):
-        db_reply = "Error 404 Not Found: While it is possible the database is down, it is also likely that your TPP Database IP or port is invalid, but possible also you are trying to access a collection or data field that does not exist. Start by double checking your config.yml file; ask Bikash or Sarah B-S to verify the correct IP and port."
+        raise LookupError("Error 404 Not Found: While it is possible the database is down, it is also likely that your TPP Database IP or port is invalid, but possible also you are trying to access a collection or data field that does not exist. Start by double checking your config.yml file; ask Bikash or Sarah B-S to verify the correct IP and port.")
     elif (code_num == 405):
-        db_reply = "Error 405 Method Not Allowed: You're trying to use a method (push, get, delete) that's not allowed by the database. Double check with Bikash that what you're trying to do is valid."
+        raise LookupError("Error 405 Method Not Allowed: You're trying to use a method (push, get, delete) that's not allowed by the database. Double check with Bikash that what you're trying to do is valid.")
     elif (code_num == 408):
-        db_reply = "Error 408 Request Timeout: The database might be down. Please check with Bikash or Sarah B-S."
+        raise LookupError("Error 408 Request Timeout: The database might be down. Please check with Bikash or Sarah B-S.")
     elif (code_num == 429):
-        db_reply = "Error 429 Too Many Requests: The TPP-database server is overloaded because you've sent too many requests in a short amount of time. Please wait before you try sending again."
+        raise LookupError("Error 429 Too Many Requests: The TPP-database server is overloaded because you've sent too many requests in a short amount of time. Please wait before you try sending again.")
     elif (code_num == 451):
-        db_reply = "Error 451 Unavailable for Legal Reasons: QUIT BREAKING THE LAW!"
+        raise LookupError("Error 451 Unavailable for Legal Reasons: QUIT BREAKING THE LAW!")
     elif (code_num == 500):
-        db_reply = "Error 500 Internal Server Error: The server has encountered a situation that it's not sure how to handle. Deep investigation of the steps leading to this response are required."
+        raise LookupError("Error 500 Internal Server Error: The server has encountered a situation that it's not sure how to handle. Deep investigation of the steps leading to this response are required.")
     elif (code_num == 501):
-        db_reply = "Error 501 Not Implemented: It's likely that the method you tried to call (e.g. get, put, delete) is not available for the TPP database. Double check that you are doing what you think you're doing."
+        raise LookupError("Error 501 Not Implemented: It's likely that the method you tried to call (e.g. get, put, delete) is not available for the TPP database. Double check that you are doing what you think you're doing.")
     elif (code_num == 502):
-        db_reply = "Error 502 Bad Gateway: I'm not sure what this means but you better investigate."
+        raise LookupError("Error 502 Bad Gateway: I'm not sure what this means but you better investigate.")
     elif (code_num == 503):
-        db_reply = "Error 503 Service Unavailable: The TPP Database seems to be unavailable right now; either it's down for maintenance or is overloaded. Try again much later."
+        raise LookupError("Error 503 Service Unavailable: The TPP Database seems to be unavailable right now; either it's down for maintenance or is overloaded. Try again much later.")
         #### !!!!!!!H Maybe add some kind of delayed push or wait loop.
     elif (code_num == 504):
-        db_reply = "Error 504 Gateway Timeout: TPP database timed out. Please report this to Bikash, it's likely a server-end error."
+        raise LookupError("Error 504 Gateway Timeout: TPP database timed out. Please report this to Bikash, it's likely a server-end error.")
     elif (code_num == 505):
-        db_reply = "Error 505: The HTTP version used in the request is not supported by the TPP Database. Please let Bikash know you received this error message, it's likely a problem on our end."
+        raise LookupError("Error 505: The HTTP version used in the request is not supported by the TPP Database. Please let Bikash know you received this error message, it's likely a problem on our end.")
     elif (code_num == 507):
-        db_reply = "Error 507 Insufficient Storage: Oh no, this is actually really bad. Report to TPP team IMMEDIATELY!"
+        raise LookupError("Error 507 Insufficient Storage: Oh no, this is actually really bad. Report to TPP team IMMEDIATELY!")
     elif (code_num == 511):
-        db_reply = "Error 511 Network Authentication Requred: Seems you forgot to authenticate (or your authentication was invalid; if the latter, please check your config.yml file."
+        raise LookupError("Error 511 Network Authentication Requred: Seems you forgot to authenticate (or your authentication was invalid; if the latter, please check your config.yml file.")
     else:
-        db_reply = "TPP DATABASE SERVER ERROR: An unrecognized error occurred."
+        raise LookupError("TPP DATABASE SERVER ERROR: An unrecognized error occurred.")
 
-    print ("Error status "+str(status)+" - True means an error occurred.")
-    print ("Error: "+str(db_reply))
+    if status:
+        print ("Server responded OK. (Status "+str(status)+").")
+        print ("Message from TPP database: "+str(db_reply))
+    else:
+        raise LookupError("TPP DATABASE ERROR OCCURRED but I'm not sure how to diagnose it. Please contact Error Master Burke-Spolaor!\n")
 
-    return status,db_reply
-
-
-
-
-def check_globus_auth(auth_info):
-    """.
-
-    Checks globus authentication info is valid.
-
-    Input:
-        auth_info dictionary
-
-    Output:
-        true (good), false (fail)
-    """
-
-    #!!!! NEED TO WRITE. Might be a Joe thing.
-    
-    return
+    # Note it's not strictly neccessary to return anything here at all.
+    return status
 
 
-def gen_token(auth_info,length=3650):
-    """.
 
-    Generate a TPP database token.
-    
-    Author:    Sarah Burke-Spolaor
-    Init Date: 23 May 2023
-    
-    This script can be run to instantiate a new user token. It is
-    autoset to authenticate a token for 10 years. The user's
-    config.yml must contain a correct IP and port.
-
-    Input: 
-        length [expiry in days]
-        
-    Output: 
-        token [currently needs to be added to config file by hand]
-
-    """
-
-    # Read config file for authentication info
-    #auth_info = read_config()
-    tpp_token_call = auth_info['tpp_url'] + "token?=" + str(length)
-    
-    # Get the location of DATA_ID from TPP-DB
-    token = requests.post(tpp_token_call, data = {"username":auth_info['tpp_user'],"password":auth_info['tpp_pass']}).json()['access_token']
-    print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.\n")
-    print("Make sure you add it in to your config.yml file.\n")
-    
-    return token
 
 def gen_user(username,password):
     """.
@@ -186,7 +136,9 @@ def gen_user(username,password):
     It will then initiate a token for the user.
 
     Input: 
-        length [expiry in days]
+        username [string]
+        password [string]
+        length   [token expiry time in days]
         
     Output: 
         token [currently needs to be added to config file by hand]
@@ -200,21 +152,21 @@ def gen_user(username,password):
         response = requests.post(db.auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
         check_return_status(response)
 
-        #!H!H
-        tpp_token_call = auth['tpp_url'] + "token?=" + str(length)
-    
-        # Get the location of DATA_ID from TPP-DB
-        token = requests.post(tpp_token_call, data = {"username":auth['tpp_user'],"password":auth['tpp_pass']}).json()['access_token']
-        print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.\n")
-        print("Make sure you add it in to your config.yml file.\n")
-        
-        return token
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
         exit()
-        
+
+    token = gen_token()
+
+
+    print("Username "+username+" created.")
+    print("****************************************************\nMake sure you update the following tpp-db information in your config.yml file:\nuser: \""+username+"\"\npass: \""+password+"\"\ntoken: \""+token+"\"\n****************************************************\n");
+
     return
 
 
@@ -239,13 +191,23 @@ def gen_token(length=3650):
     """
 
     # Read config file for authentication info
-    auth = read_config()
-    tpp_token_call = auth['tpp_url'] + "token?=" + str(length)
+    tpp_token_call = db.auth['tpp_url'] + "token?=" + str(length)
     
     # Get the location of DATA_ID from TPP-DB
-    token = requests.post(tpp_token_call, data = {"username":auth['tpp_user'],"password":auth['tpp_pass']}).json()['access_token']
-    print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.\n")
-    print("Make sure you add it in to your config.yml file.\n")
+    try:
+        token = requests.post(tpp_token_call, data = {"username":db.auth['tpp_user'],"password":db.auth['tpp_pass']}).json()['access_token']
+          
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
+          
+    except:
+        print_comms_error()
+        exit()
+          
+    print("SUCCESS!!!")
+    print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.")
+    print("Make sure you update the tpp-db \"token\" field in your config.yml file.\n")
     
     return token
 
@@ -260,19 +222,50 @@ def print_comms_error():
 
     print(traceback.format_exc())
     print("BASIC DB COMMUNICATION ERROR! See traceback above.")
+    print("FIRST, CHECK:\n\tCheck that your config.yml file has the correct username,\n\tpassword, and token. It is also possible your token has\n\texpired and you need to generate a new one.\n")
     print("If you got error 61:\n\tYou may be running on a computer that does not have\n\tdirect access to the TPP database node. Try running\n\tfrom Link.")
     print("If your connection timed out or you got error 113:\n\tYou likely have the wrong IP/port in your config.yml\n\tfile; check it and confirm with Bikash/Sarah if needed.")
+    print("Finally:\n\tIt is possible that the TPP server is down. If you have\n\tchecked for the above errors and are still having trouble,\n\tplease contact Bikash/Sarah.")
 
-    return    
+    return
 
 
 
 
 
 #----------------------This code might not be needed-----------------------------
-#!H!H setup.py structure may render this subfunction unnecessary; if
-#     so, make sure that all references to read_config in this code are
-#     appropriately fixed.
+# This procedure is redunant but can be used in isolation if desired.
+def check_tpp_auth(auth_info):
+    """.
+
+    Pings TPP database to verify authentication data. The ping is
+    actually reading the "versions" schema.
+
+    Input:
+        auth_info dictionary
+
+    Output: 
+        status:  boolean; true (good), false (fail)
+        message: None or String; error message, if any
+
+    """
+
+    try:
+        response = requests.get(db.auth['tpp_url'], headers=db.auth['tpp_headers'])
+        check_return_status(response)
+
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
+        
+    except:
+        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
+        print_comms_error()
+        exit()
+
+    return
+
+
 def read_config():
     """.
 
@@ -331,3 +324,24 @@ def read_config():
     #auth_info = mydict
 
     return mydict
+
+
+
+def check_globus_auth(auth_info):
+    """.
+
+    Checks globus authentication info is valid.
+
+    Input:
+        auth_info dictionary
+
+    Output:
+        true (good), false (fail)
+    """
+
+    #!!!! NEED TO WRITE. Might be a Joe thing.
+    
+    return
+
+
+
