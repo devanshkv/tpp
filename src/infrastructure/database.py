@@ -91,7 +91,7 @@ def check_return_status(response):
     elif (code_num == 408):
         raise LookupError("Error 408 Request Timeout: The database might be down. Please check with Bikash or Sarah B-S.")
     elif (code_num == 422):
-        raise LookupError("Error 422 Unprocessable content: This usually means the 'data' you're submitting to TPP DB is out of expected range or of the wrong data type. Double check what you've submitted against the github or spreadsheet schema lists!")
+        raise LookupError("Error 422 Unprocessable content: Double check the name of the collection you're submitting to. If that doesn't work, check the 'data' you're submitting to TPP DB. It may be out of expected range or of the wrong data type. Double check what you've submitted against the github and/or spreadsheet schema lists!")
     elif (code_num == 429):
         raise LookupError("Error 429 Too Many Requests: The TPP-database server is overloaded because you've sent too many requests in a short amount of time. Please wait before you try sending again.")
     elif (code_num == 451):
