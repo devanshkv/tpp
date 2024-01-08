@@ -79,7 +79,7 @@ def check_return_status(response):
     elif (code_num == 400):
         raise LookupError("Error 400 Bad request; Check your data schema name or entry against the expected format.")
     elif (code_num == 401):
-        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid.\nPlease check the information your config.yml file and correct it.")
+        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid.\nPlease check the information your config.yml file and correct it (particularly TPP database username, password, token).")
     elif (code_num == 403):
         raise LookupError("Error 403 Forbidden; Your TPP database authentication information was valid, but for some reason you don't have permission to access the desired resource. Reach out to Bikash or Sarah B-S to proceed.")
     elif (code_num == 404):
@@ -247,7 +247,6 @@ def check_tpp_auth(auth_info):
     Output: 
         status:  boolean; true (good), false (fail)
         message: None or String; error message, if any
-
     """
 
     try:
