@@ -110,7 +110,7 @@ def init_collection(collection):
             "fetch_width": None,                    # float (0-128)ms
             "gl": None,                             # float (0-360) degrees
             "gb": None,                             # float [-90, 90] degrees
-            "f_ctr": None                           # float (200-50000)MHz
+            "f_ctr": None,                           # float (200-50000)MHz
             "detected_width": None,                 # float (0-128)ms
             "sn": None,                             # float
             "fetch_score": None,                    # float (0-1)
