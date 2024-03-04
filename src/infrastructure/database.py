@@ -1,7 +1,7 @@
 import traceback
 import requests   # Allow communications with TPP-DB API.
 import yaml       # For reading private authentication data.
-import config as db
+import config as dbconfig
 #from . import config as db
 #from tpp import infrastructure as db # Need to understand if this is the right thing to do and then replace the below instances of auth_info with db.auth
 
@@ -29,7 +29,7 @@ def init_collection(collection):
     COMMUNICATIONS
 
     if (collection == "data"):
-        data = {
+        dbdata = {
             'start_date_time': None,                # float MJD (45000-63000)
             'obs_length': None,                     # float seconds (1, 40_000)
             'ra_j': None,                           # float decimal degrees (0, 360)
@@ -44,7 +44,7 @@ def init_collection(collection):
             'size': None                            # int in the units of MB.
         }
     elif (collection == "survey"):
-        survey = {
+        dbdata = {
             'survey': None,                         # str; !H!H but does this need to be given on instantiation?
             'parent_survey': None,                  # str limit to 20 characters
             'f_hi': None,                           # float (250 - 40_000)MHz
@@ -62,7 +62,7 @@ def init_collection(collection):
 
     """
     if (collection == "job_submission_dict"):
-        job_submission_dict = {
+        dbdata = {
             "pipelineID": None,                     # str
             "dataID": None,                         # str
             "started_globus": None,                 # "YYYY-MM-DDTHH:MM:SS"
@@ -80,7 +80,7 @@ def init_collection(collection):
             "log_dir": None                         # str
         }
     elif (collection == "processing_outcomes"):
-        processing_outcomes = {
+        dbdata = {
             'submissionID': None,                   # str
             'dataID': None,                         # str
             'node_system': None,                    # str
@@ -99,7 +99,7 @@ def init_collection(collection):
             'output_directory': None                # str
         }
     elif (collection == "candidate_results"):
-        candidate_results = {
+        dbdata = {
             "submissionID": None,                   # str
             "outcomeID": None,                      # str
             "dataId": None,                         # str
@@ -146,7 +146,7 @@ def init_collection(collection):
             }
         }
     elif (collection == "pipeline_versions"):
-        pipeline_versions = {
+        dbdata = {
             'launcher_version': None,               # str
             'pipeline_version': None,               # str
             'heimdall_version': None,               # str
@@ -158,9 +158,9 @@ def init_collection(collection):
 
     
     try:
-        collection_url = db.auth['tpp_url'] + str(collection)
-        print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(db.auth['tpp_headers']))
-        response = requests.post(collection_url,json=data,headers=db.auth['tpp_headers'])
+        collection_url = dbconfig.auth['tpp_url'] + str(collection)
+        print("I'll try requests.post("+collection_url+",json="+str(dbdata)+",headers="+str(dbconfig.auth['tpp_headers']))
+        response = requests.post(collection_url,json=dbdata,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
 
     except LookupError:
@@ -193,9 +193,9 @@ def post(collection,data):
 
     """
     try:
-        collection_url = db.auth['tpp_url'] + str(collection)
-        print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(db.auth['tpp_headers']))
-        response = requests.post(collection_url,json=data,headers=db.auth['tpp_headers'])
+        collection_url = dbconfig.auth['tpp_url'] + str(collection)
+        print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
+        response = requests.post(collection_url,json=data,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
 
     except LookupError:
@@ -323,7 +323,7 @@ def gen_user(username,password):
     #auth = read_config()
 
     try:
-        response = requests.post(db.auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
+        response = requests.post(dbconfig.auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
         check_return_status(response)
 
     except LookupError:
@@ -365,11 +365,11 @@ def gen_token(length=3650):
     """
 
     # Read config file for authentication info
-    tpp_token_call = db.auth['tpp_url'] + "token?=" + str(length)
+    tpp_token_call = dbconfig.auth['tpp_url'] + "token?=" + str(length)
     
     # Get the location of DATA_ID from TPP-DB
     try:
-        token = requests.post(tpp_token_call, data = {"username":db.auth['tpp_user'],"password":db.auth['tpp_pass']}).json()['access_token']
+        token = requests.post(tpp_token_call, data = {"username":dbconfig.auth['tpp_user'],"password":dbconfig.auth['tpp_pass']}).json()['access_token']
           
     except LookupError:
         print(traceback.format_exc())
@@ -425,7 +425,7 @@ def check_tpp_auth(auth_info):
     """
 
     try:
-        response = requests.get(db.auth['tpp_url'], headers=db.auth['tpp_headers'])
+        response = requests.get(dbconfig.auth['tpp_url'], headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
 
     except LookupError:
