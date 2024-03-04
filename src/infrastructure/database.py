@@ -28,7 +28,7 @@ def init_collection(collection):
     REALLY GOING TO BE PART OF THE ONGOING BACK-AND-FORTH
     COMMUNICATIONS
 
-    if (collection is "data"):
+    if (collection == "data"):
         data = {
             'start_date_time': None,                # float MJD (45000-63000)
             'obs_length': None,                     # float seconds (1, 40_000)
@@ -43,7 +43,7 @@ def init_collection(collection):
             'survey': None,                         # str maximum of 20 characters
             'size': None                            # int in the units of MB.
         }
-    elif (collection is "survey"):
+    elif (collection == "survey"):
         survey = {
             'survey': None,                         # str; !H!H but does this need to be given on instantiation?
             'parent_survey': None,                  # str limit to 20 characters
@@ -61,7 +61,7 @@ def init_collection(collection):
         }
 
     """
-    if (collection is "job_submission_dict"):
+    if (collection == "job_submission_dict"):
         job_submission_dict = {
             "pipelineID": None,                     # str
             "dataID": None,                         # str
@@ -79,7 +79,7 @@ def init_collection(collection):
             "log_name": None,                       # str
             "log_dir": None                         # str
         }
-    elif (collection is "processing_outcomes"):
+    elif (collection == "processing_outcomes"):
         processing_outcomes = {
             'submissionID': None,                   # str
             'dataID': None,                         # str
@@ -98,7 +98,7 @@ def init_collection(collection):
             'working_directory': None,              # str
             'output_directory': None                # str
         }
-    elif (collection is "candidate_results"):
+    elif (collection == "candidate_results"):
         candidate_results = {
             "submissionID": None,                   # str
             "outcomeID": None,                      # str
@@ -145,7 +145,7 @@ def init_collection(collection):
                 "user": str                          # str max 20 characters
             }
         }
-    elif (collection is "pipeline_versions"):
+    elif (collection == "pipeline_versions"):
         pipeline_versions = {
             'launcher_version': None,               # str
             'pipeline_version': None,               # str
