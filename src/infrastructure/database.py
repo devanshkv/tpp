@@ -43,7 +43,7 @@ def init_collection(collection):
             'survey': None,                         # str maximum of 20 characters
             'size': None                            # int in the units of MB.
         }
-    else if (collection is "survey"):
+    elif (collection is "survey"):
         survey = {
             'survey': None,                         # str; !H!H but does this need to be given on instantiation?
             'parent_survey': None,                  # str limit to 20 characters
@@ -98,7 +98,7 @@ def init_collection(collection):
             'working_directory': None,              # str
             'output_directory': None                # str
         }
-    else if (collection is "candidate_results"):
+    elif (collection is "candidate_results"):
         candidate_results = {
             "submissionID": None,                   # str
             "outcomeID": None,                      # str
@@ -145,7 +145,7 @@ def init_collection(collection):
                 "user": str                          # str max 20 characters
             }
         }
-    else if (collection is "pipeline_versions"):
+    elif (collection is "pipeline_versions"):
         pipeline_versions = {
             'launcher_version': None,               # str
             'pipeline_version': None,               # str
