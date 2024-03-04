@@ -108,8 +108,8 @@ def init_collection(collection):
             "cutout_start": None,                   # float (45000-62000)MJD
             "cutout_end": None,                     # float (45000-62000)MJD
             "fetch_width": None,                    # float (0-128)ms
-            "gl": None                              # float (0-360) degrees
-            "gb": None                              # float [-90, 90] degrees
+            "gl": None,                             # float (0-360) degrees
+            "gb": None,                             # float [-90, 90] degrees
             "f_ctr": None                           # float (200-50000)MHz
             "detected_width": None,                 # float (0-128)ms
             "sn": None,                             # float
