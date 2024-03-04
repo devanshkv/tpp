@@ -61,7 +61,7 @@ def init_collection(collection):
         }
 
     """
-    if (collection == "job_submission"):
+    if (collection == "job_submissions"):
         dbdata = {
             "pipelineID": None,                     # str
             "dataID": None,                         # str
@@ -79,7 +79,7 @@ def init_collection(collection):
             "log_name": None,                       # str
             "log_dir": None                         # str
         }
-    elif (collection == "processing_outcome"):
+    elif (collection == "processing_outcomes"):
         dbdata = {
             'submissionID': None,                   # str
             'dataID': None,                         # str
