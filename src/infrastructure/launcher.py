@@ -21,6 +21,13 @@ to be written by Joe Glaser). The purpose of this code is to:
    the script? Or will this be done in the processing script? - Joe G
    to comment.
 
+
+THERE ARE SEVERAL REASONS LAUNCHER SHOULD FORCE-FAIL:
+
+ - It can't reach the TPP database.
+ - It can't find the file.
+ - There's not enough space on thorny flat.
+
 """
 
 # -----------------------------------------------
@@ -113,7 +120,8 @@ if __name__ == "__main__":
     tppdb_base = "http://" + tppdb_ip + ":" + tppdb_port
     tppdb_data = tppdb_base + "/data"
     headers = {"Authorization": f"Bearer{user_token}"}
-
+    #TPPDB Check connection and auth info here.
+    
     # -----------------------------------------------
     # Transfer Necessary Files to Compute FS
     # -----------------------------------------------
@@ -121,6 +129,8 @@ if __name__ == "__main__":
     ## TODO: Sarah needs to add a comms failure check at this point.
     db_request = requests.get(tppdb_data + "/" + data_id, headers=headers).json()
     stor_location = db_request['location_on_filesystem']
+    #TPPDB INITIATE OUTCOMES, SUBMISSIONS, and RESULTS instances here, after we are sure that the job is going to be launched. This way, the TPP pipeline only has to deal with updating information (not creating a new document) and knows the submissionID, dataID, etc relevant to this job.
+    # Want to have a command that initiates the documents in these three collections.
 
     # Construct the Location on Compute FS
     ## TODO: Finalize FS Structure on Compute
@@ -153,3 +163,6 @@ if __name__ == "__main__":
 
     #Transfer the Final Products from Compute to Storage
     manage_single_transfer(tc, compute, storage, comp_location, stor_location)
+
+
+    

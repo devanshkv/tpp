@@ -8,6 +8,176 @@ import config as db
 #!H!H!H Exiting in the exceptions throughout here might not be desirable if we want to continue running the pipeline
 
 
+def init_collection(collection):
+    """.
+
+    Initiates an empty collection with the appropriate fields and
+    returns the unique collection identifier.
+
+    Input: 
+        collection name (string)
+
+    Output: 
+        unique ID (string)
+
+    """
+
+    """.
+
+    I'VE TEMPORARILY MADE THE FIRST TWO COMMENTED BECAUSE THEY'RE NOT
+    REALLY GOING TO BE PART OF THE ONGOING BACK-AND-FORTH
+    COMMUNICATIONS
+
+    if (collection is "data"):
+        data = {
+            'start_date_time': None,                # float MJD (45000-63000)
+            'obs_length': None,                     # float seconds (1, 40_000)
+            'ra_j': None,                           # float decimal degrees (0, 360)
+            'dec_j': None,                          # float decimal degrees (-90, 90)
+            'source_name': None,                    # string
+            'beam': None,                           # int default to zero if observing system doesn't have beams.
+            'regex_filename': None,                 # string without '/'
+            'n_files': None,                        # int
+            'md5_file': None,                       # List of strings
+            'location_on_filesystem': None,         # str
+            'survey': None,                         # str maximum of 20 characters
+            'size': None                            # int in the units of MB.
+        }
+    else if (collection is "survey"):
+        survey = {
+            'survey': None,                         # str; !H!H but does this need to be given on instantiation?
+            'parent_survey': None,                  # str limit to 20 characters
+            'f_hi': None,                           # float (250 - 40_000)MHz
+            'f_low': None,                          # float (250 - 40_000)MHz
+            'zap_array': None,                      # Array of integers (0, 32000)
+            'sampling_time': None,                  # float (1 - 40_000)microseconds
+            'number_of_frequency_channels': None,   # int (10-20_000)
+            'backend': None,                        # str Default to 16 characters
+            'backend_mode': None,                   # str Default to 16 characters
+            'telescope': None,                      # str Default to 16 characters
+            'number_of_bits': None,                 # int (1 - 64)
+            'no_of_pols': None,                     # int (1 - 4)
+            'pol_type': None                        # str less than 10 characters
+        }
+
+    """
+    if (collection is "job_submission_dict"):
+        job_submission_dict = {
+            "pipelineID": None,                     # str
+            "dataID": None,                         # str
+            "started_globus": None,                 # "YYYY-MM-DDTHH:MM:SS"
+            "started_transfer_data": None,          # "YYYY-MM-DDTHH:MM:SS"
+            "started_slurm": None,                  # "YYYY-MM-DDTHH:MM:SS"
+            "status": {
+                "completed": None,                  # Optional: True or False
+                "date_of_completion": None,         # Optional: "YYYY-MM-DDTHH:MM:SS"
+                "error": None                       # Optional: str
+            },
+            "username": None,                       # str
+            "duration": None,                       # float in seconds
+            "target_directory": None,               # str
+            "log_name": None,                       # str
+            "log_dir": None                         # str
+        }
+    else if (collection is "processing_outcomes"):
+        processing_outcomes = {
+            'submissionID': None,                   # str
+            'dataID': None,                         # str
+            'node_system': None,                    # str
+            'rfi_fraction': None,                   # float (0.0 - 1.0)
+            'rms_prezap': None,                     # float
+            'rms_postzap': None,                    # float
+            'job_start': None,                      # "YYYY-MM-DDTHH:MM:SS"
+            'job_end': None,                        # "YYYY-MM-DDTHH:MM:SS"
+            'job_state_time': None,                 # "YYYY-MM-DDTHH:MM:SS"
+            'job_state': None,                      # str (e.g., "Completed", "Failed", etc.)
+            'fetch_histogram': None,                # List of floats
+            'n_members': None,                      # int should be >= 0
+            'n_detections': None,                   # int should be >= 0
+            'n_candidates': None,                   # int should be >= 0
+            'working_directory': None,              # str
+            'output_directory': None                # str
+        }
+    else if (collection is "candidate_results"):
+        candidate_results = {
+            "submissionID": None,                   # str
+            "outcomeID": None,                      # str
+            "dataId": None,                         # str
+            "dm": None,                             # float pc/cm^3
+            "tcand": None,                          # float (45000-62000)MJD
+            "cutout_start": None,                   # float (45000-62000)MJD
+            "cutout_end": None,                     # float (45000-62000)MJD
+            "fetch_width": None,                    # float (0-128)ms
+            "gl": None                              # float (0-360) degrees
+            "gb": None                              # float [-90, 90] degrees
+            "f_ctr": None                           # float (200-50000)MHz
+            "detected_width": None,                 # float (0-128)ms
+            "sn": None,                             # float
+            "fetch_score": None,                    # float (0-1)
+            "ymw_dm_mw": None,                      # float
+            "ymw_dist": None,                       # float
+            "ymw_z": None,                          # float
+            "ne_dm_mw": None,                       # float
+            "ne_dist": None,                        # float
+            "result_location": None,                # str
+            "result_name": None,                    # str
+            "proposed_type": None,                  # str max 6 characters
+            "confirmed_type": None,                 # str max 6 characters
+            "interesting_info": {
+                "is_interesting": None,             # True or False
+                "user": None                        # str max 20 characters
+            },
+            "periodicity_info": {
+                "periodicity_done": None,           # True or False
+                "user": None                        # str max 20 characters
+            },
+            "differencing_info": {
+                "differencing_done": None,          # True or False
+                "user": None                        # str max 20 characters
+            },
+            "inspection_info": {
+                "was_inspected": None,                 # True or False
+                "user": str                            # str max 20 characters
+            },
+            "note_info": {
+                "note": None,                       # str max 200 characters
+                "when_submitted": None,              # "YYYY-MM-DDTHH:MM:SS"
+                "user": str                          # str max 20 characters
+            }
+        }
+    else if (collection is "pipeline_versions"):
+        pipeline_versions = {
+            'launcher_version': None,               # str
+            'pipeline_version': None,               # str
+            'heimdall_version': None,               # str
+            'your_version': None,                   # str
+            'candcsvmaker_version': None,           # str
+            'decimate_version': None,               # str
+            'ddplan_version': None                  # str
+        }
+
+    
+    try:
+        collection_url = db.auth['tpp_url'] + str(collection)
+        print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(db.auth['tpp_headers']))
+        response = requests.post(collection_url,json=data,headers=db.auth['tpp_headers'])
+        check_return_status(response)
+
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
+        
+    except:
+        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
+        print_comms_error()
+        exit()
+
+    uniqueID = "blah"
+
+        
+    return unique_ID
+
+
 
 #!H!H!H I think we need a tpp_wait that counts to a certain amount of time then times out and dies if it can't communicate with the database. This should probably go here in the post command (maybe callable as a separate thing).
 def post(collection,data):
