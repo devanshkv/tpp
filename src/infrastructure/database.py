@@ -79,7 +79,7 @@ def init_collection(collection):
             "log_name": None,                       # str
             "log_dir": None                         # str
         }
-    else if (collection is "processing_outcomes"):
+    elif (collection is "processing_outcomes"):
         processing_outcomes = {
             'submissionID': None,                   # str
             'dataID': None,                         # str
