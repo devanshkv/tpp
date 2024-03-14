@@ -210,10 +210,75 @@ def post(collection,data):
     return
 
 
+def get(collection,filter):
+    """.
+
+    Basic database search.
+
+    Input:
+        database collection name.
+
+    Output: filtered results (not sure what form??)
+
+    """
+    results = Null
+    return results
+
+
+def search_data_position(myRA,myDec,mySize):
+    """.
+
+    Simple "box" search. Will search for sources within both ra+/-size
+    and dec+/-size. 
+
+    !!! THIS SEARCH WILL WORK INCREASINGLY POORLY THE FURTHER AWAY YOU
+        ARE FROM THE EQUATORIAL REGION!
+
+    !!! It also needs to be fixed to actually take the beam size into
+        account (that is, we only want to return pointings in
+        principle within one HPBW of the requested position).
+
+    !!! It will also not work properly wherever the range spans the
+        sidereal day change (e.g. RA 350 to 10).
+
+    
+    Input: RA, Dec, +/-range in decimal degrees
+
+    Output:
+        Query results dictionary
+
+    """
+
+
+    try:
+
+        # Set up query dictionary:
+        query_dict = {"ra_j":{"$gte":myRA-mySize, "$lte":myRA+mySize,"dec_j": {"$gte":myDec-mySize, "$lte":myDec+mySize}}
+        
+        collection_url = dbconfig.auth['tpp_url'] + "data"
+        #print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
+        response = requests.get (collection_url, json=query_dict, headers=dbconfig.auth['tpp_headers'])
+        check_return_status(response)
+    
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
+        
+    except:
+        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
+        print_comms_error()
+        exit()
+
+    results = response.json()
+    print("\n\n**********************\nI found THE FOLLOWING RESULTS\n**********************\n" + str(results))
+    
+    return results
+
 
 #!H!H The long list of errors below aren't currently being passed properly.
 #Actually on 8 January they seem to be working well!!! I think the "raise" format allowed it to work appropriately.
 def check_return_status(response):
+
     """.
 
     Checks the return status of the database and reports any failurs
