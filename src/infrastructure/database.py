@@ -253,7 +253,7 @@ def search_data_position(myRA,myDec,mySize):
     try:
 
         # Set up query dictionary:
-        query_dict = {"ra_j":{"$gte":myRA-mySize, "$lte":myRA+mySize,"dec_j": {"$gte":myDec-mySize, "$lte":myDec+mySize}}
+        query_dict = {"ra_j":{"$gte":myRA-mySize, "$lte":myRA+mySize},"dec_j": {"$gte":myDec-mySize, "$lte":myDec+mySize}}
         
         collection_url = dbconfig.auth['tpp_url'] + "data"
         #print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
