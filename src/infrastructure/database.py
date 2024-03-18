@@ -269,10 +269,10 @@ def search_data_position(myRA,myDec,mySize):
         print_comms_error()
         exit()
 
-    results = response.json()
+    myresults = response.json()
     print("\n\n**********************\nI found THE FOLLOWING RESULTS\n**********************\n" + str(results))
     
-    return results
+    return myresults
 
 
 #!H!H The long list of errors below aren't currently being passed properly.
@@ -299,6 +299,7 @@ def check_return_status(response):
     # Note I think the "status" relevance is now obsolete.
     status = False
 
+    print (response)
     code_num = response.status_code
     
     # Successful completion
