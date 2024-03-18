@@ -299,7 +299,7 @@ def check_return_status(response):
     # Note I think the "status" relevance is now obsolete.
     status = False
 
-    print (response)
+    print (response.json())
     code_num = response.status_code
     
     # Successful completion
