@@ -8,7 +8,7 @@ import config as dbconfig
 #!H!H!H Exiting in the exceptions throughout here might not be desirable if we want to continue running the pipeline
 
 
-def init_collection(collection):
+def init_document(collection,pipelineID=None,dataID=None,submissionID=None):
     """.
 
     Initiates an empty collection with the appropriate fields and
@@ -22,6 +22,15 @@ def init_collection(collection):
 
     """
 
+    if (collection == "processing_outcomes" && (submissionID == None || dataID == None)):
+        #BAD
+
+    if (collection == "job_submissions" && (pipelineID == None || dataID == None)):
+        #BAD
+
+        
+
+    
     """.
 
     I'VE TEMPORARILY MADE THE FIRST TWO COMMENTED BECAUSE THEY'RE NOT
@@ -60,44 +69,6 @@ def init_collection(collection):
             'pol_type': None                        # str less than 10 characters
         }
 
-    """
-    if (collection == "job_submissions"):
-        dbdata = {
-            "pipelineID": None,                     # str
-            "dataID": None,                         # str
-            "started_globus": None,                 # "YYYY-MM-DDTHH:MM:SS"
-            "started_transfer_data": None,          # "YYYY-MM-DDTHH:MM:SS"
-            "started_slurm": None,                  # "YYYY-MM-DDTHH:MM:SS"
-            "status": {
-                "completed": None,                  # Optional: True or False
-                "date_of_completion": None,         # Optional: "YYYY-MM-DDTHH:MM:SS"
-                "error": None                       # Optional: str
-            },
-            "username": None,                       # str
-            "duration": None,                       # float in seconds
-            "target_directory": None,               # str
-            "log_name": None,                       # str
-            "log_dir": None                         # str
-        }
-    elif (collection == "processing_outcomes"):
-        dbdata = {
-            'submissionID': None,                   # str
-            'dataID': None,                         # str
-            'node_system': None,                    # str
-            'rfi_fraction': None,                   # float (0.0 - 1.0)
-            'rms_prezap': None,                     # float
-            'rms_postzap': None,                    # float
-            'job_start': None,                      # "YYYY-MM-DDTHH:MM:SS"
-            'job_end': None,                        # "YYYY-MM-DDTHH:MM:SS"
-            'job_state_time': None,                 # "YYYY-MM-DDTHH:MM:SS"
-            'job_state': None,                      # str (e.g., "Completed", "Failed", etc.)
-            'fetch_histogram': None,                # List of floats
-            'n_members': None,                      # int should be >= 0
-            'n_detections': None,                   # int should be >= 0
-            'n_candidates': None,                   # int should be >= 0
-            'working_directory': None,              # str
-            'output_directory': None                # str
-        }
     elif (collection == "candidate_results"):
         dbdata = {
             "submissionID": None,                   # str
@@ -137,12 +108,12 @@ def init_collection(collection):
             },
             "inspection_info": {
                 "was_inspected": None,                 # True or False
-                "user": str                            # str max 20 characters
+                "user": None                            # str max 20 characters
             },
             "note_info": {
                 "note": None,                       # str max 200 characters
                 "when_submitted": None,              # "YYYY-MM-DDTHH:MM:SS"
-                "user": str                          # str max 20 characters
+                "user": None                          # str max 20 characters
             }
         }
     elif (collection == "pipeline_versions"):
@@ -154,6 +125,44 @@ def init_collection(collection):
             'candcsvmaker_version': None,           # str
             'decimate_version': None,               # str
             'ddplan_version': None                  # str
+        }
+    """
+    if (collection == "job_submissions"):
+        dbdata = {
+            "pipelineID": pipelineID,               # str
+            "dataID": dataID,                       # str
+            "started_globus": None,                 # "YYYY-MM-DDTHH:MM:SS"
+            "started_transfer_data": None,          # "YYYY-MM-DDTHH:MM:SS"
+            "started_slurm": None,                  # "YYYY-MM-DDTHH:MM:SS"
+            "status": {
+                "completed": None,                  # Optional: True or False
+                "date_of_completion": None,         # Optional: "YYYY-MM-DDTHH:MM:SS"
+                "error": None                       # Optional: str
+            },
+            "username": dbconfig.auth['tpp_user'],  # str
+            "duration": None,                       # float in seconds
+            "target_directory": None,               # str
+            "log_name": None,                       # str
+            "log_dir": None                         # str
+        }
+    elif (collection == "processing_outcomes"):
+        dbdata = {
+            'submissionID': submissionID,           # str
+            'dataID': dataID,                       # str
+            'node_system': None,                    # str
+            'rfi_fraction': None,                   # float (0.0 - 1.0)
+            'rms_prezap': None,                     # float
+            'rms_postzap': None,                    # float
+            'job_start': None,                      # "YYYY-MM-DDTHH:MM:SS"
+            'job_end': None,                        # "YYYY-MM-DDTHH:MM:SS"
+            'job_state_time': None,                 # "YYYY-MM-DDTHH:MM:SS"
+            'job_state': None,                      # str (e.g., "Completed", "Failed", etc.)
+            'fetch_histogram': None,                # List of floats
+            'n_members': None,                      # int should be >= 0
+            'n_detections': None,                   # int should be >= 0
+            'n_candidates': None,                   # int should be >= 0
+            'working_directory': None,              # str
+            'output_directory': None                # str
         }
 
     
@@ -172,7 +181,9 @@ def init_collection(collection):
         print_comms_error()
         exit()
 
-    uniqueID = "blah"
+    # BIKASH
+    # Need a query line here to understand what the self-autogenerated ID is.
+    uniqueID = response.json()
 
         
     return unique_ID
