@@ -250,7 +250,7 @@ def get(collection,collectionID):
 
     outcome = x.json()
     print("I found the following document with ID "+collectionID)
-    print outcome
+    print(outcome)
         
     return outcome
 
