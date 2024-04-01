@@ -331,6 +331,9 @@ def check_return_status(response):
     # Note I think the "status" relevance is now obsolete.
     status = False
 
+    print ("My response was....")
+    print (response)
+    print ("response.json() is ....")
     print (response.json())
     code_num = response.status_code
     
