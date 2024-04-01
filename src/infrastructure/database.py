@@ -18,7 +18,7 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         collection name (string)
 
     Output: 
-        unique ID (string)
+        unique ID (string) that is now stored in the databse as the collection ID
 
     """
 
@@ -221,7 +221,7 @@ def post(collection,data):
     return
 
 
-def get(collection,filter):
+def get(collection,collectionID):
     """.
 
     Basic database search.
@@ -229,11 +229,32 @@ def get(collection,filter):
     Input:
         database collection name.
 
-    Output: filtered results (not sure what form??)
+    Output: 
+        unique collection ID
 
     """
-    results = Null
-    return results
+    try:
+        #x = requests.get("http://ipaddress:port/endpoint/document_id", headers=headers_file)
+        collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
+        response = requests.get(collection_url,headers=dbconfig.auth['tpp_headers'])
+        check_return_status(response)
+
+    except LookupError:
+        print(traceback.format_exc())
+        exit()
+        
+    except:
+        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
+        print_comms_error()
+        exit()
+
+    outcome = x.json()
+    print("I found the following document with ID "+collectionID)
+    print outcome
+        
+    return outcome
+
+
 
 
 def search_data_position(myRA,myDec,mySize):
