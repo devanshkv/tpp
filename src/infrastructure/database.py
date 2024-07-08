@@ -151,7 +151,7 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         dbdata = {
             'submissionID': submissionID,           # str
             'dataID': dataID,                       # str
-            'node_system': None,                    # str
+            'node_name': None,                    # str
             'rfi_fraction': None,                   # float (0.0 - 1.0)
             'rms_prezap': None,                     # float
             'rms_postzap': None,                    # float
