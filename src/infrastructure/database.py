@@ -150,21 +150,21 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         # GOOD
         dbdata = {
             'submissionID': submissionID,           # str
-            'dataID': dataID,                       # str
-            'node_name': None,                    # str
-            'rfi_fraction': None,                   # float (0.0 - 1.0)
-            'rms_prezap': None,                     # float
-            'rms_postzap': None,                    # float
-            'job_start': None,                      # "YYYY-MM-DDTHH:MM:SS"
-            'job_end': None,                        # "YYYY-MM-DDTHH:MM:SS"
-            'job_state_time': None,                 # "YYYY-MM-DDTHH:MM:SS"
-            'job_state': None,                      # str (e.g., "Completed", "Failed", etc.)
-            'fetch_histogram': None,                # List of floats
-            'n_members': None,                      # int should be >= 0
-            'n_detections': None,                   # int should be >= 0
-            'n_candidates': None,                   # int should be >= 0
-            'working_directory': None,              # str
-            'output_directory': None                # str
+            'dataID': dataID                        # str
+            #'node_name': None,                      # str
+            #'rfi_fraction': None,                   # float (0.0 - 1.0)
+            #'rms_prezap': None,                     # float
+            #'rms_postzap': None,                    # float
+            #'job_start': None,                      # "YYYY-MM-DDTHH:MM:SS"
+            #'job_end': None,                        # "YYYY-MM-DDTHH:MM:SS"
+            #'job_state_time': None,                 # "YYYY-MM-DDTHH:MM:SS"
+            #'job_state': None,                      # str (e.g., "Completed", "Failed", etc.)
+            #'fetch_histogram': None,                # List of floats
+            #'n_members': None,                      # int should be >= 0
+            #'n_detections': None,                   # int should be >= 0
+            #'n_candidates': None,                   # int should be >= 0
+            #'working_directory': None,              # str
+            #'output_directory': None                # str
         }
 
 
