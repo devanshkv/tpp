@@ -161,12 +161,10 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         check_return_status(response)
     except LookupError:
         print(traceback.format_exc())
-        #exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        #exit()
 
     # Return the self-generated ID for the collection.
     responseID = response.json()['inserted_id'][0]
@@ -197,12 +195,10 @@ def patch(collection,collectionID,data):
 #!H!H!H
     except LookupError:
         print(traceback.format_exc())
-        exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        exit()
     
     return
 
@@ -228,12 +224,10 @@ def get(collection,collectionID):
 
     except LookupError:
         print(traceback.format_exc())
-        exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        exit()
 
     outcome = response.json()
     print("I found the following document with ID "+collectionID)
@@ -283,12 +277,10 @@ def get(collection,collectionID):
 #
 #    except LookupError:
 #        print(traceback.format_exc())
-#        exit()
 #        
 #    except:
 #        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
 #        print_comms_error()
-#        exit()
 #
 #    return
 
@@ -331,12 +323,10 @@ def search_data_position(myRA,myDec,mySize):
     
     except LookupError:
         print(traceback.format_exc())
-        exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        exit()
 
     myresults = response.json()
     print("\n\n**********************\nI found THE FOLLOWING RESULTS\n**********************\n" + str(results))
@@ -471,12 +461,10 @@ def gen_user(username,password):
 
     except LookupError:
         print(traceback.format_exc())
-        exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        exit()
 
 
     dbconfig.auth['tpp_user'] = username
@@ -520,11 +508,9 @@ def gen_token(length=3650):
           
     except LookupError:
         print(traceback.format_exc())
-        exit()
           
     except:
         print_comms_error()
-        exit()
           
     print("SUCCESS!!!")
     print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.")
@@ -577,12 +563,10 @@ def check_tpp_auth(auth_info):
 
     except LookupError:
         print(traceback.format_exc())
-        exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        exit()
 
     return
 
@@ -612,12 +596,10 @@ def read_config():
     except FileNotFoundError:
         print(traceback.format_exc())
         print("BASIC TPP CODE SETUP ERROR!\n\tYou seem to not have a config.yml file in the expected\n\tplace: "+config_file+"\n\tOr, the file is for some reason unreadable.")
-        exit()
         
 #    except:
 #        print(traceback.format_exc())
 #        print("BASIC TPP CODE SETUP ERROR! You seem to not have a config.yml file in the expected place, or the file is unreadable.")
-#        exit()
         
     tpp_user  = authentication['tpp-db']['user']
     tpp_pass  = authentication['tpp-db']['pass']
