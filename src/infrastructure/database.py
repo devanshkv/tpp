@@ -319,8 +319,8 @@ def check_return_status(response):
         raise LookupError("TPP DATABASE SERVER ERROR: An unrecognized error occurred.")
 
     if status:
-        print ("Server responded OK. (Status "+str(status)+").")
-        print ("Message from TPP database: "+str(db_reply))
+        print ("Your TPP database request seems to have been successful.")
+        print ("Response from TPP database: "+str(db_reply))
     else:
         raise LookupError("TPP DATABASE ERROR OCCURRED but I'm not sure how to diagnose it. Please contact Error Master Burke-Spolaor!")
 
