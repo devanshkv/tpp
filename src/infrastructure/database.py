@@ -382,8 +382,10 @@ def check_return_status(response):
         elif ('message' in response.json().keys()):
             status = True
             db_reply = response.json()['message']
-#        elif (response.json() == [])
-#            status = True #!H!H!H
+        # This needed for .get responses, which don't include any message.
+        elif ('_id' in response.json().keys()):
+            status = True
+            db_reply = response.json()
     elif (code_num == 61):
         raise LookupError("Error 61: If the traceback notes some kind of connection error, you may be running on a computer that does not have direct access to the TPP database node. Try running from Link.")
     elif (code_num == 113):
