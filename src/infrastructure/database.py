@@ -165,7 +165,7 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
             #'n_candidates': None,                   # int should be >= 0
             #'working_directory': None,              # str
             #'output_directory': None                # str
-        }
+        } 
 
 
     try:
