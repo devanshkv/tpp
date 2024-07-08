@@ -235,7 +235,7 @@ def get(collection,collectionID):
         print_comms_error()
         exit()
 
-    outcome = x.json()
+    outcome = response.json()
     print("I found the following document with ID "+collectionID)
     print(outcome)
         
