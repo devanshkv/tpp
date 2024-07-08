@@ -161,12 +161,12 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         check_return_status(response)
     except LookupError:
         print(traceback.format_exc())
-        exit()
+        #exit()
         
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-        exit()
+        #exit()
 
     # Return the self-generated ID for the collection.
     responseID = response.json()['inserted_id'][0]
@@ -176,11 +176,11 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
 
 
 #!H!H!H I think we need a tpp_wait that counts to a certain amount of time then times out and dies if it can't communicate with the database. This should probably go here in the post command (maybe callable as a separate thing).
-def post(collection,data):
+def patch(collection,collectionID,data):
     ### SARAH need to check PATCH operation and fix this here.
     """.
     
-    Pushes a piece of information to the database. 
+    Pushes a piece of information to an existing document in the database. 
 
     Input:
         database collection name, information
@@ -190,11 +190,11 @@ def post(collection,data):
 
     """
     try:
-        collection_url = dbconfig.auth['tpp_url'] + str(collection)
+        collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
         print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
-        response = requests.post(collection_url,json=data,headers=dbconfig.auth['tpp_headers'])
+        response = requests.patch(collection_url,json=data,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
-
+#!H!H!H
     except LookupError:
         print(traceback.format_exc())
         exit()
@@ -210,13 +210,13 @@ def post(collection,data):
 def get(collection,collectionID):
     """.
 
-    Basic database search.
+    Basic database search with collection ID.
 
     Input:
-        database collection name.
+        database collection name and collection ID
 
     Output: 
-        unique collection ID
+        document.
 
     """
     try:
