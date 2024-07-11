@@ -62,6 +62,9 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         #print("I'll try requests.post("+collection_url+",json="+str(dbdata)+",headers="+str(dbconfig.auth['tpp_headers']))
         response = requests.post(collection_url,json=dbdata,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
+        # Need to return the self-generated ID for the collection.
+        responseID = response.json()['inserted_id'][0]
+
     except LookupError:
         print(traceback.format_exc())
         
@@ -69,10 +72,8 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
-    # Return the self-generated ID for the collection.
-    responseID = response.json()['inserted_id'][0]
-        
-    return responseID
+    else:
+        return responseID
 
 
 
@@ -98,8 +99,9 @@ def patch(collection,collectionID,data):
         
     except:
         print_comms_error()
-    
-    return
+
+    else:
+        return
 
 #!H!H!H This is working but only works for a particular known collectionID; it is not a general search operation.
 def get(collection,collectionID):
@@ -120,19 +122,19 @@ def get(collection,collectionID):
         print("I found collection URL "+collection_url)
         response = requests.get(collection_url,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
+        outcome = response.json()
 
     except LookupError:
         print(traceback.format_exc())
-        
+    
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
-
-    outcome = response.json()
-    print("I found the following document with ID "+collectionID)
-    print(outcome)
         
-    return outcome
+    else:
+        print("I found the following document with ID "+collectionID)
+        print(outcome)
+        return outcome
 
 
 
@@ -211,7 +213,6 @@ def search_data_position(myRA,myDec,mySize):
 
 
     try:
-
         # Set up query dictionary:
         query_dict = {"ra_j":{"$gte":myRA-mySize, "$lte":myRA+mySize},"dec_j": {"$gte":myDec-mySize, "$lte":myDec+mySize}}
         
@@ -222,15 +223,15 @@ def search_data_position(myRA,myDec,mySize):
     
     except LookupError:
         print(traceback.format_exc())
-        
+    
     except:
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
-    myresults = response.json()
-    print("\n\n**********************\nI found THE FOLLOWING RESULTS\n**********************\n" + str(results))
-    
-    return myresults
+    else: 
+        myresults = response.json()
+        print("\n\n**********************\nI found THE FOLLOWING RESULTS\n**********************\n" + str(results))
+        return myresults
 
 
 #!H!H The long list of errors below aren't currently being passed properly.
@@ -365,17 +366,17 @@ def gen_user(username,password):
         # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
-
-    dbconfig.auth['tpp_user'] = username
-    dbconfig.auth['tpp_pass'] = password
+    else:
+        dbconfig.auth['tpp_user'] = username
+        dbconfig.auth['tpp_pass'] = password
     
-    token = gen_token()
+        token = gen_token()
 
 
-    print("Username "+username+" created.")
-    print("****************************************************\nMake sure you update the following tpp-db information in your config.yml file:\nuser: \""+username+"\"\npass: \""+password+"\"\ntoken: \""+token+"\"\n****************************************************\n");
+        print("Username "+username+" created.")
+        print("****************************************************\nMake sure you update the following tpp-db information in your config.yml file:\nuser: \""+username+"\"\npass: \""+password+"\"\ntoken: \""+token+"\"\n****************************************************\n");
 
-    return
+        return
 
 
 def gen_token(length=3650):
