@@ -91,6 +91,7 @@ def patch(collection,collectionID,data):
     """
     try:
         collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
+        print("Patching "+str(data)+" to collection_url "+str(collection_url))
         #print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
         response = requests.patch(collection_url,json=data,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
@@ -119,7 +120,7 @@ def get(collection,collectionID):
     try:
         #x = requests.get("http://ipaddress:port/endpoint/document_id", headers=headers_file)
         collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
-        print("I found collection URL "+collection_url)
+        print("Seeking entry ID "+collectionID+" from collection "+str(collection))
         response = requests.get(collection_url,headers=dbconfig.auth['tpp_headers'])
         check_return_status(response)
         outcome = response.json()
@@ -294,7 +295,7 @@ def check_return_status(response):
     elif (code_num == 408):
         raise LookupError("Error 408 Request Timeout: The database might be down. Please check with Bikash or Sarah B-S.")
     elif (code_num == 422):
-        raise LookupError("Error 422 Unprocessable content: Double check the name of the collection you're submitting to. If that doesn't work, check the 'data' you're submitting to TPP DB. It may be out of expected range or of the wrong data type. Double check what you've submitted against the github and/or spreadsheet schema lists!")
+        raise LookupError("Error 422 Unprocessable content: Double check the name of the collection you're submitting to, or the 'data' you're submitting to TPP DB. It may be out of expected range or of the wrong data type. Double check what you've submitted against the github and/or spreadsheet schema lists! Alternately, you may have submitted an invalid collection ID.")
     elif (code_num == 429):
         raise LookupError("Error 429 Too Many Requests: The TPP-database server is overloaded because you've sent too many requests in a short amount of time. Please wait before you try sending again.")
     elif (code_num == 451):
