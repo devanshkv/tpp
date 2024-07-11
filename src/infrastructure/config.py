@@ -26,7 +26,7 @@ globus_stor_id = auth['globus']['storage_collection_id']
 globus_comp_id = auth['globus']['compute_collection_id']
 globus_comp_dir= auth['globus']['compute_scratch_dir']
 globus_res_dir = auth['globus']['storage_result_dir']
-globus_clint_id= auth['globus']['client_id']
+globus_client_id= auth['globus']['client_id']
 
 
 # Set up dictionary for convenience
