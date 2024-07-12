@@ -69,7 +69,6 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         print(traceback.format_exc())
         
     except:
-        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
     else:
@@ -129,7 +128,6 @@ def get(collection,collectionID):
         print(traceback.format_exc())
     
     except:
-        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
         
     else:
@@ -161,7 +159,6 @@ def current_pipelineID():
         print(traceback.format_exc())
     
     except:
-        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
         
     else:
@@ -212,7 +209,6 @@ def current_pipelineID():
 #        print(traceback.format_exc())
 #        
 #    except:
-#        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
 #        print_comms_error()
 #
 #    return
@@ -257,7 +253,6 @@ def search_data_position(myRA,myDec,mySize):
         print(traceback.format_exc())
     
     except:
-        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
     else: 
@@ -395,7 +390,6 @@ def gen_user(username,password):
         print(traceback.format_exc())
         
     except:
-        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
     else:
@@ -497,7 +491,6 @@ def check_tpp_auth(auth_info):
         print(traceback.format_exc())
         
     except:
-        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
         print_comms_error()
 
     return
