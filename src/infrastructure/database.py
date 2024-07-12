@@ -47,10 +47,10 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
         }
     elif (collection == "processing_outcomes"):
         if (submissionID == None):
-            #BAD
+            #BAD response
             response = "You tried to initiate a "+collection+" document with database.init_document() but did not include the required submissionID."
             raise Exception(response)
-        # GOOD
+        # GOOD response
         dbdata = {
             'submissionID': submissionID,           # str
             'dataID': dataID                        # str
@@ -103,7 +103,7 @@ def patch(collection,collectionID,data):
 
     else:
         return
-
+    
 #!H!H!H This is working but only works for a particular known collectionID; it is not a general search operation.
 def get(collection,collectionID):
     """.
@@ -137,6 +137,37 @@ def get(collection,collectionID):
         print(outcome)
         return outcome
 
+    
+#!H!H!H This is working but only works for a particular known collectionID; it is not a general search operation.
+def current_pipelineID():
+    """.
+
+    Get the latest pipelineID.
+
+    Input:
+        none.
+
+    Output: 
+        ID.
+
+    """
+    try:
+        collection_url = dbconfig.auth['tpp_url'] + "pipelines"
+        response = requests.get(collection_url,headers=dbconfig.auth['tpp_headers'])
+        check_return_status(response)
+        outcome = response.json()
+
+    except LookupError:
+        print(traceback.format_exc())
+    
+    except:
+        # An exception to a post requests usually means some kind of basic communications error that doesn't return a "response".
+        print_comms_error()
+        
+    else:
+        print("I found the following document with ID "+collectionID)
+        print(outcome)
+        return outcome
 
 
 #def update(collection,collectionID,field,value):
