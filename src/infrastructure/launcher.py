@@ -28,7 +28,7 @@ THERE ARE SEVERAL REASONS LAUNCHER SHOULD FORCE-FAIL:
  - It can't find the file.
  - There's not enough space on thorny flat.
 
-"""
+""" 
 
 # -----------------------------------------------
 # General Module Imports
