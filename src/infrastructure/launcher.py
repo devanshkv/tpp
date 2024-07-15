@@ -2,7 +2,7 @@
 TPP Job Launcher: Thorny Flat Edition
 
 
-Author:    Sarah Burke-Spolaor
+Author:    Sarah Burke-Spolaor but also maybe mostly Joe Glaser
 Init Date: 22 May 2023
 
 This code will be called by the Globus file transfer script (intended
@@ -40,6 +40,9 @@ import globus_sdk as globus
 from globus_sdk.scopes import TransferScopes
 import argparse
 import database as db
+from datetime import datetime
+import getpass
+import traceback
 
 def manage_single_transfer(transfer_client, src, dest, src_location, dest_location):
     # Initiate Transfer using TransferClient
@@ -65,7 +68,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launches the TPP pipeline.")
     parser.add_argument('--dataID', '-d', dest='dataID', type=int, default=None,
                         help="The Unique Data Identifier for the file to be processed by the pipeline.")
-    args= parser.parse_args()
+    args = parser.parse_args()
 
     # -----------------------------------------------
     # Data Identifier & Configuration File
@@ -76,18 +79,7 @@ if __name__ == "__main__":
         print("Please enter the Unique Data Identifier to be processed. Otherwise this code cannot run.")
         exit()
 
-    
 
-   
-    # -----------------------------------------------
-    # Check that the latest pipeline is what's being run.
-    # -----------------------------------------------
-
-    try:
-        current_pipelineID = db.current_pipelineID()
-    except:
-        exit()
-        
     # -----------------------------------------------
     # GLOBUS Configuration
     # -----------------------------------------------
@@ -111,40 +103,83 @@ if __name__ == "__main__":
     # Set Up the Storage Collection and Compute Collection IDs
     storage = db.dbconfig.globus_stor_id
     compute = db.dbconfig.globus_comp_id
+
+    # -----------------------------------------------
+    # Set up TPP-DB connections
+    # -----------------------------------------------
+
+    time_start = datetime.utcnow()
     
-    # -----------------------------------------------
-    # Transfer Necessary Files to Compute FS
-    # -----------------------------------------------
-    # Get the location of dataID on Storage from TPP-DB
-    ## TODO: Sarah needs to add a comms failure check at this point.
-    # Test DB connection and existence of data ID.
     try:
+        # Check that the current pipeline is being run (and test of TPPDB connection).
+        current_pipelineID = db.current_pipelineID()
+
+        # Test that the requested dataID exists.
         db_response = db.get("data",dataID)
+
+        #Initiate submissions doc, after we are sure that the job is likely to be launched successfully.
+        submissionID = db.init_document("job_submissions",dataID,pipelineID=current_pipelineID)
+        print("Created submissionID "+str(submissionID))
+        time_UTC = datetime.utcnow().isoformat()
+        username = getpass.getuser()
+        db.patch("job_submissions",submissionID,data={"started_globus":time_UTC,"username":username})
     except:
         # Hopefully db will print all appropriate errors.
         # Here we want to exit if there are fundamental issues with the DB.
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
+                
 
+
+    # -----------------------------------------------
+    # Transfer Necessary Files to Compute FS
+    # -----------------------------------------------        
     stor_location = db_response['location_on_filesystem']
-
-    #TPPDB INITIATE OUTCOMES and SUBMISSIONS documents here (and RESULTS?), after we are sure that the job is going to be launched. This way, the TPP pipeline only has to deal with updating information (not creating a new document) and knows the submissionID, dataID, etc relevant to this job.
-    try:
-        submissionID = db.init_document("job_submissions",dataID,pipelineID=current_pipelineID)
-        outcomeID = db.init_document("processing_outcomes",dataID,submissionID=submissionID)
-    except:
-        exit()
 
     # Construct the Location on Compute FS
     ## TODO: Finalize FS Structure on Compute
     comp_location = db.dbconfig.globus_scratch_dir+"BLAHBLAHBLAH"
 
     # Transfer the Required files from Storage to Compute
+    try:
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"started_transfer_data":time_UTC})
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+
     manage_single_transfer(tc, storage, compute, stor_location, comp_location)
 
+    
     # -----------------------------------------------
     # Launch the TPP Pipeline via the SLURM Command
     # -----------------------------------------------
 
+    # Set up logging directory and file. !H!H!H need to get slurm to writ to this log!
+    log_name = f"{time_start.year:04d}{time_start.month:02d}{time_start.day:02d}_{time_start.hour:02d}{time_start.minute:02d}{time_start.second:02d}_{submissionID}.log"
+    log_dir = #!H!H!H what do we make this?
+    
+    # Initiate outcome doc before job submission.
+    # Also Initiate RESULTS document? -- I don't think so, it can be written at
+    # end of pipeline. Outcomes will track progress. But add it in here if
+    # there's a need to have the diagnostics that an incomplete results DB could
+    # provide (over, for instance, the job log alone).
+    try:
+        outcomeID = db.init_document("processing_outcomes",dataID,submissionID=submissionID)
+        #!H!H!H  ADD RESULTS DOC HERE?
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"started_slurm":time_UTC,"log_name":log_name,"log_dir":log_dir})
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+    
+    # Need to figure out how to pass to tpp_pipeline at least the outcomeID relevant to this job.
     #!H!H!H
     # Use command line to call slurm.
     #subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"Reshma\" --partition=thepartitiontouse --wrap=\"SINGULARITY CALL ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
@@ -155,9 +190,29 @@ if __name__ == "__main__":
 
     # Communicate to TPP-Database the Final Status of SLURM Job
 
+    try:
+        db.patch("job_submissions",submissionID,data={"log_name":log_name,"log_dir":log_dir})
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+    
+
+        
+    
     # -----------------------------------------------
     # Transfer Products from Compute to Storage
     # -----------------------------------------------
+    try:
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":"final transfer"})
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+
     #Construct the Location on Compute FS of Products
     comp_location_hdf5 = db.dbconfig.globus_comp_dir+"BLAHBLAHBLAH"+".hdf5"
 
@@ -166,6 +221,21 @@ if __name__ == "__main__":
 
     #Transfer the Final Products from Compute to Storage
     manage_single_transfer(tc, compute, storage, comp_location_hdf5, stor_location_hdf5)
+
+    time_end = utc.datetime()
+
+    delta_time = time_end - time_start
+    duration_minutes = int(delta_time.seconds()/60)
+    
+    try:
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"competed":True,"date_of_completion":time_UTC},"duration":duration_minutes})
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+
 
 
     
