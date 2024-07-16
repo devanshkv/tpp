@@ -315,7 +315,7 @@ def check_return_status(response):
     elif (code_num == 403):
         raise LookupError("Error 403 Forbidden; Your TPP database authentication information was valid, but for some reason you don't have permission to access the desired resource. Reach out to Bikash or Sarah B-S to proceed.")
     elif (code_num == 404):
-        raise LookupError("Error 404 Not Found: While it is possible the database is down, it is also likely that your TPP Database IP or port is invalid, but possible also you are trying to access a collection or data field that does not exist. Start by double checking your config.yml file; ask Bikash or Sarah B-S to verify the correct IP and port.")
+        raise LookupError("Error 404 Not Found: There are several possibilities:\n  - You requested an invalid collection or data field (check against schema or MongoDB_API list).\n  - Your TPP Database IP or port is invalid. Checking your config.yml file.\n  - The database may be down (confirm with Sarah).")
     elif (code_num == 405):
         raise LookupError("Error 405 Method Not Allowed: You're trying to use a method (push, get, delete) that's not allowed by the database. Double check with Bikash that what you're trying to do is valid.")
     elif (code_num == 408):
