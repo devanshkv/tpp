@@ -33,7 +33,16 @@ import numpy as np
 import pandas as pd
 import database as db #TPPDB: This line needs to be fixed.
 #TPPDB: Here we will need to fix the line that imports the db comms library.
+import traceback
 
+def print_dberr():
+    logger.error("*****DB COMMUNICATIONS ERROR, could not push to database.*****")
+    logger.error("**************************************************************")
+    # I don't think we want exiting behavior here, but this is
+    # where we might be able to add in a "save for next update
+    # later when TPPDB communications are back up".
+    return
+    
 def dm_max(obslen,f_low,f_high):
     dm_h=(obslen*10**3/4.15)*(1/((1/f_low**2)-(1/f_high**2)))
     return dm_h
@@ -52,18 +61,19 @@ def tpp_state(status):
               "job_state": status}
         db.patch("processing_outcomes",outcomesID,data=data)
     except:
-        # I don't think we want exiting behavior here, but this is
-        # where we might be able to add in a "save for next update
-        # later when TPPDB communications are back up".
-        logger.error("*****DB COMMUNICATIONS ERROR, could not push status to database.*****")
+        print_dberr()
         
     return
-    #TPPDB PUSH:
-    #   time_now: update job_state_time to value of "time_now".
-    #   job_state: update to value string "status"
 
-def do_RFI_filter(filenames,basenames,your_object):
-    #Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
+
+def do_RFI_filter(filenames,basename):
+    '''
+    Reshma comment: Running your_writer with standard RFI
+    mitigation. Clean file to run heimdall and candmaker on. Doesn't
+    have to do RFI mitigation on each step. Also, filterbanks
+    required for decimate.
+    '''
+    
     #!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
 
@@ -73,7 +83,7 @@ def do_RFI_filter(filenames,basenames,your_object):
     subprocess.call(mask_cmd,shell=True)
     mask_end=timer()
     logger.debug('RFI MASK: your_rfimask.py took '+str(mask_end-mask_start)+' s')
-    mask_basename=str(basenames)+'_your_rfi_mask'
+    mask_basename=str(basename)+'_your_rfi_mask'
     killmask_file= f"{mask_basename}.bad_chans"
     with open(killmask_file,'r') as myfile:
     	file_str = myfile.read()
@@ -83,13 +93,8 @@ def do_RFI_filter(filenames,basenames,your_object):
     for chan in my_list:
     	 if chan == '':
         	 my_list.remove(chan)
-    if len(my_list) == 0:
-         logger.info(f'RFI MASK: No channels zapped')
-    else:
-         logger.debug(f'RFI MASK: No: of channels zapped = {len(my_list)}')
-         logger.info('RFI MASK: Percentage of channels zapped = '+str((len(my_list)/your_object.your_header.nchans)*100)+' %')
 
-    return
+    return len(my_list)
 
 def do_heimdall(your_fil_object):
     heimdall_start=timer()
@@ -242,10 +247,11 @@ if __name__ == "__main__":
             logger.warning("******************************************************************")
             db_on = True
 
-        # Test TPPDB connection and existence of outcomesID.
+        # Test basic TPPDB connection and existence of outcomesID.
         try:
             db.get("processing_outcomes",outcomesID)
         except:
+            print_dberr()
             exit()
             
     else:
@@ -253,20 +259,19 @@ if __name__ == "__main__":
         db_on = False
         
 
-    #Determine node_name and current working directory
+    # Determine node_name and current working directory.
     node_name = os.uname()[1]
     cwd = os.getcwd()
-    logger.info("Processing in directory "+str(cwd)+" on node "+str(node_name)+", began at UTC "+str(time_start_UTC))
-
+    logger.info("Processing in directory "+str(cwd)+" on node "+str(node_name)+", began at UTC "+str(time_start_UTC.isoformat()))
     if (db_on):
         tpp_state("started")
-        # TPPDB_PUSH:
-        #   time_start_UTC: Update job_start based on previously determined "time_start_UTC"
-        #   time_now to time_start_UTC
-        #   node_name: TPPDB: DETERMINE NODE NAME, submit to OUTCOMES node_name
-        #   current_working_directory: TPPDB: Determine current working directory, submit to OUTCOMES working_directory
-        data={"job_state_time":time_now,"job_state": status}
-        db.post(collection="processing_outcomes",json=data,auth_info = my_auth)                                              
+        try:
+            data = {"node_name":node_name,
+                    "job_start":time_start_UTC.isoformat()}
+            db.patch("processing_outcomes",outcomesID,data=data)
+        except:
+            print_dberr()
+
 
 
     ############## ############## ############## 
@@ -280,18 +285,39 @@ if __name__ == "__main__":
         tpp_state("your_writer")
 
     try:
-        do_RFI_filter(filestring,your_files.your_header.basename)
-    except Exception as myerror:
+        n_zapped = do_RFI_filter(filestring,basename)
+    except:
         if (db_on):
-            status = "ERROR in your_writer: "+ str(myerror)
+            status = "ERROR in your_writer: "+ str(traceback.format_exc())
             tpp_state(status)
         else:
-            logger.error(str(myerror))
+            logger.error(str(traceback.format_exc()))
         exit()
         
     your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
+
+    # Report level of zapping
+    if (n_zapped == 0):
+         logger.info(f'RFI MASK: No channels zapped')
+    else:
+         logger.debug(f'RFI MASK: Number of channels zapped = {len(my_list)}')
+         rfi_fraction = n_zapped/your_files.your_header.nchans
+         logger.info('RFI MASK: Percentage of channels zapped = '+str(rfi_fraction*100)+' %')
+
+    # Report RFI_fraction (and ideally pre-/post-zap RMS, though we might be able to obtain info for these values).
+    if (db_on):
+        try:
+            data = {"rfi_fraction":rfi_fraction}
+            db.patch("processing_outcomes",outcomesID,data=data)
+        except:
+            print_dberr()
+
+
     logger.debug('Writer done, moving on')
 
+    
+
+            
 
     ############## ############## ############## 
     ##############     DDPLAN     ############## 
@@ -323,12 +349,12 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
     try:
         do_heimdall(your_fil_object)
-    except Exception as myerror:
+    except:
         if (db_on):
-            status = "ERROR in heimdall: "+myerror
+            status = "ERROR in heimdall: "+str(traceback.format_exc())
             tpp_state(status)
         else:
-            logger.error(str(myerror))
+            logger.error(str(traceback.format_exc()))
         exit()
 
 
@@ -346,12 +372,12 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
     try:
         num_cands = do_candcsvmaker(your_fil_object)
-    except Exception as error:
+    except:
         if (db_on):
-            status = "ERROR in candcsvmaker: "+error
+            status = "ERROR in candcsvmaker: "+str(traceback.format_exc())
             tpp_state(status)
         else:
-            logger.error(str(myerror))
+            logger.error(str(traceback.format_exc()))
         exit()
 
      
@@ -388,12 +414,12 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
     try:
         do_your_candmaker(your_fil_object)
-    except Exception as error:
+    except:
         if (db_on):
-            status = "ERROR in your_candmaker: "+error
+            status = "ERROR in your_candmaker: "+str(traceback.format_exc())
             tpp_state(status)
         else:
-            logger.error(str(myerror))
+            logger.error(str(traceback.format_exc()))
         exit()
 
         
@@ -429,12 +455,12 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
     try:
         do_fetch()
-    except Exception as error:
+    except:
         if (db_on):
-            status = "ERROR in fetch: "+error
+            status = "ERROR in fetch: "+str(traceback.format_exc())
             tpp_state(status)
         else:
-            logger.error(str(myerror))
+            logger.error(str(traceback.format_exc()))
         exit()
 
 
@@ -454,10 +480,10 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             do_your_h5plotter()
         except Exception as error:
             if (db_on):
-                status = "ERROR in your_h5plotter: "+error
+                status = "ERROR in your_h5plotter: "+str(traceback.format_exc())
                 tpp_state(status)
             else:
-                logger.error(str(myerror))
+                logger.error(str(traceback.format_exc()))
             exit()
 
 
@@ -479,10 +505,20 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     ############## ############## ############## 
     ##############     WRAP-UP    ############## 
     ############## ############## ############## 
-    tpp_state("complete")
-    #TPPDB PUSH:
-    #    job_end: update job_end to value of "time_now".
-    
+    time_end_UTC = datetime.utcnow()
+    if (db_on):
+        tpp_state("complete")
+        try:
+            data = {"job_end":time_end_UTC}
+            db.patch("processing_outcomes",outcomesID,data=data)
+        except:
+            print_dberr()
+
+    delta_time = time_end_UTC - time_start_UTC
+    duration_minutes = int(delta_time.seconds()/60)
+
+    logger.info(f"Job complete after {duration_minutes:d} minutes")
+
     # (All done).
 
 
