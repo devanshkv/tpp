@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 """
 Assumptions: We are converting all input files to filterbanks after doing default RFI mitigation, 
 searching all spectra, only stokes I is searched, runs on default gpu Id, i.e 0, 
@@ -32,39 +31,63 @@ from your.utils.misc import YourArgparseFormatter
 from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
-import database as db
-
-#TPPDB: Here we will need to add a line about importing the TPP database communications library.
-auth_info = db.auth_info # !H!H This needs to be fixed. Emmanuel indicated we can make a setup.py type file that will allow us to import all the config.yml info as global information when we "import database" or something. Need to check with him how we can then pull it into here.
-
+import database as db #TPPDB: This line needs to be fixed.
+#TPPDB: Here we will need to fix the line that imports the db comms library.
 
 def dm_max(obslen,f_low,f_high):
     dm_h=(obslen*10**3/4.15)*(1/((1/f_low**2)-(1/f_high**2)))
     return dm_h
 
 def tpp_state(status):
-    time_now = datetime.now()
+    """.
+    This updates the processing_outcomes status.
+    An attempted (but failed) update current provides an EXCEPT but no exit.
+    """
 
-    data={"job_state_time":time_now,"job_state": status}
+    time_now = datetime.now().isoformat()
 
-    db.post(collection="processing_outcomes",json=data,auth_info = my_auth) #!H
+    try:
+        # POST UPDATE.
+        data={"job_state_time":time_now,
+              "job_state": status}
+        db.patch("processing_outcomes",outcomesID,data=data)
+    except:
+        # I don't think we want exiting behavior here, but this is
+        # where we might be able to add in a "save for next update
+        # later when TPPDB communications are back up".
+        logger.error("*****DB COMMUNICATIONS ERROR, could not push status to database.*****")
+        
+    return
     #TPPDB PUSH:
     #   time_now: update job_state_time to value of "time_now".
     #   job_state: update to value string "status"
-    # NEED TO ADD ERROR HANDLING HERE.
-    
-def do_RFI_filter(filenames,basename):
+
+def do_RFI_filter(filenames,basenames,your_object):
     #Reshma comment: Running your_writer with standard RFI mitigation. Clean file to run heimdall and candmaker on. Doesn't have to do RFI mitigation on each step. Also, filterbanks required for decimate.
     #!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
     #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
-    #!RESHMA We will need here to read the zap array and include it in the writer_cmd below.
 
-    writer_start=timer()
-    writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
-    logger.debug('WRITER: command = ' + writer_cmd)
-    subprocess.call(writer_cmd,shell=True)
-    writer_end=timer()
-    logger.debug('WRITER: your_writer.py took '+str(writer_end-writer_start)+' s')
+    mask_start=timer()
+    mask_cmd="your_rfimask.py -v -f "+str(filenames)+" -sk_sigma 4 -sg_sigma 4 -sg_frequency 15"
+    logger.debug('RFI MASK: command = ' + mask_cmd)
+    subprocess.call(mask_cmd,shell=True)
+    mask_end=timer()
+    logger.debug('RFI MASK: your_rfimask.py took '+str(mask_end-mask_start)+' s')
+    mask_basename=str(basenames)+'_your_rfi_mask'
+    killmask_file= f"{mask_basename}.bad_chans"
+    with open(killmask_file,'r') as myfile:
+    	file_str = myfile.read()
+    my_list = [] ##initializing a list
+    for chan in file_str.split(' '): ##using split function to split, the list.this splits the value in index specified and return the value.
+         my_list.append(chan)
+    for chan in my_list:
+    	 if chan == '':
+        	 my_list.remove(chan)
+    if len(my_list) == 0:
+         logger.info(f'RFI MASK: No channels zapped')
+    else:
+         logger.debug(f'RFI MASK: No: of channels zapped = {len(my_list)}')
+         logger.info('RFI MASK: Percentage of channels zapped = '+str((len(my_list)/your_object.your_header.nchans)*100)+' %')
 
     return
 
@@ -219,14 +242,12 @@ if __name__ == "__main__":
             logger.warning("******************************************************************")
             db_on = True
 
-            # Read and check database authorization
-            try:
-                global auth_info
-                auth_info = db.read_auth()
-                db.check_tpp_auth(auth_info)
-            except:
-                print("ouch") #!H REPORT AS MAJOR FAILURE!!!! Note this exception shoudl really be caught at the launcher step and should never happen here. But we should have the slurm report this as an issue before processing starts. Pipe this to something in user's home directory called EXCEPTIONS?
-            #!H!H Need to adapt here once we get all the setup.py-style structure in place; ensure here if config.yml file does not exist or is unreadable, but communications are requested, that there is a failure.
+        # Test TPPDB connection and existence of outcomesID.
+        try:
+            db.get("processing_outcomes",outcomesID)
+        except:
+            exit()
+            
     else:
         logger.info("No connections will be made to TPP Database Manager.")
         db_on = False
@@ -260,14 +281,14 @@ if __name__ == "__main__":
 
     try:
         do_RFI_filter(filestring,your_files.your_header.basename)
-    except Exception as error:
+    except Exception as myerror:
         if (db_on):
-            status = "ERROR in your_writer: "+error
+            status = "ERROR in your_writer: "+ str(myerror)
             tpp_state(status)
         else:
-            print(error)
-            logger.debug(error)
-
+            logger.error(str(myerror))
+        exit()
+        
     your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
     logger.debug('Writer done, moving on')
 
@@ -302,12 +323,13 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
     try:
         do_heimdall(your_fil_object)
-    except Exception as error:
+    except Exception as myerror:
         if (db_on):
-            status = "ERROR in heimdall: "+error
+            status = "ERROR in heimdall: "+myerror
             tpp_state(status)
         else:
-            print(error)
+            logger.error(str(myerror))
+        exit()
 
 
     ############## ############## ############## 
@@ -329,10 +351,11 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             status = "ERROR in candcsvmaker: "+error
             tpp_state(status)
         else:
-            print(error)
-            logger.debug(error)
+            logger.error(str(myerror))
+        exit()
+
      
-    logger.info('CHECK:Number of candidates created = '+num_cands)
+    logger.info('CHECKPOINT: Number of candidates created = '+num_cands)
 
     #!HTPPDB: I think this is a good place to determine and update 
     #TPPDB: fetch_histogram (or perhaps we can get candcsvmaker to report it to
@@ -341,13 +364,16 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     #TPPDB: of those things all into candcsvmaker.py.
 
     #Create a directory for the h5s
+    # RESHMA can you check the directory tracing here? Why are we making an h5 directory and is it appropriately used below? Is this a folder that your_candmaker explicitly needs but doesn't create itself?
+    cwd = os.getcwd()
     try:
         os.makedirs("h5")
     except FileExistsError:
-        pass
-
+        logger.error("Could not create h5 directory in current directory "+str(cwd))
+        exit()
+    
     """
-
+    !!!
     NOTE IT IS HERE THAT WE NEED TO DO COORDINATE CORRECTION FOR DRIFTSCAN DATA
     !!!
     """
@@ -367,10 +393,12 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             status = "ERROR in your_candmaker: "+error
             tpp_state(status)
         else:
-            print(error)
+            logger.error(str(myerror))
+        exit()
 
+        
     # Go into h5 directory, check all h5 files created appropriately.
-    os.chdir(os.getcwd()+'/h5')
+    os.chdir(cwd+'/h5')
     logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
     dir_path='./'
@@ -406,7 +434,9 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             status = "ERROR in fetch: "+error
             tpp_state(status)
         else:
-            print(error)
+            logger.error(str(myerror))
+        exit()
+
 
 
 
@@ -427,7 +457,9 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
                 status = "ERROR in your_h5plotter: "+error
                 tpp_state(status)
             else:
-                print(error)
+                logger.error(str(myerror))
+            exit()
+
 
         #!H TPPDB: gather all relevant info for RESULTS and push every
         #TPPDB: detection to database. Is there a way to do this in bulk?
