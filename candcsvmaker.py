@@ -29,6 +29,7 @@ def gencandcsv(
         raise ValueError("No fits/fil files provided")
 
     filelist.sort()
+
     for files in filelist:
         if not os.path.isfile(files):
             raise FileNotFoundError(f"{files} not found")
@@ -57,6 +58,9 @@ def gencandcsv(
     )
     cands_out.to_csv(outname, mode="w", header=True, index=False)
 
+    # Count and report total tally of members and events after filtering.
+    n_members = 0
+    n_events = 0
     for file in tqdm.tqdm(candsfiles, position=0, leave=True):
         cands_out = pd.DataFrame(
             columns=[
@@ -94,6 +98,15 @@ def gencandcsv(
             & (cands["snr"] >= snr_th)
             & (cands["cluster_size"] >= clustersize_th)
         ]
+
+        # Add to tally of members and events after filtering.
+
+        n_members += cands["cluster_size"]
+        print("Now I have "+str(n_members) + " members.")
+
+        n_events += len(cands_filtered)
+        print("Now I have "+str(n_members) + " events.")
+
 
         if len(cands_filtered) == 0:
             logger.info(f"No candidate passes the threshold criterion in {file}")
