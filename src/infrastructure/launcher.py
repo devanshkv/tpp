@@ -104,6 +104,8 @@ if __name__ == "__main__":
     storage = db.dbconfig.globus_stor_id
     compute = db.dbconfig.globus_comp_id
 
+
+
     # -----------------------------------------------
     # Set up TPP-DB connections
     # -----------------------------------------------
@@ -194,7 +196,9 @@ if __name__ == "__main__":
 
     tpp_pipe = #!!! THE LOCATION OF tpp_pipeline.py
 
-    slurm_settings = f"--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-{submissionID}\" --partition=comm_gpu_week --gres=gpu:1 --mail-user={username}@mix.wvu.edu --mail-type BEGIN,END,FAIL --wrap=\"singularity exec /shared/containers/radio_transients/radio_transients.sif {tpp_pipe}
+    max_jobtime = 5760 # Set jobs to force fail after 4 full days of processing.
+
+    slurm_settings = f"--time={max_jobtime} --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-{submissionID}\" --partition=comm_gpu_week --gres=gpu:1 --mail-user={username}@mix.wvu.edu --mail-type BEGIN,END,FAIL --wrap=\"singularity exec /shared/containers/radio_transients/radio_transients.sif {tpp_pipe}
 -f {} filename  !!! NEED TO ADD these arguments to tpp_pipeline and make sure we have the right values here.
 -s {} submission id
 -wd {} working dir
