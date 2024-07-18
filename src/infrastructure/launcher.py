@@ -43,23 +43,8 @@ import database as db
 from datetime import datetime
 import getpass
 import traceback
+import file_manager as fm
 
-def manage_single_transfer(transfer_client, src, dest, src_location, dest_location):
-    # Initiate Transfer using TransferClient
-    task_data = globus.TransferData(source_endpoint=src, destination_endpoint=dest)
-    task_data.add_item(src_location, dest_location)
-    task_session = transfer_client.submit_transfer(task_data)
-    task_id = task_session["task_id"]
-    print(f"Submitted Transfer under Transfer ID: {task_id}")
-
-    # Wait Until the Transfer is Complete (Time in Seconds)
-    while not tc.task_wait(task_id, timeout=43200, polling_interval=15):
-        print(".", end="")
-    print(f"\n Transfer {task_id} has completed the following transfers:")
-    for info in tc.task_successful_transfers(task_id):
-        print(f"     {info['source_path']} ---> {info['destination_path']}")
-
-    # TODO: Verify the Transfer Completed Correctly, Retry Loop if there are Failures
 
 # -----------------------------------------------
 # BEGIN MAIN LOOP
@@ -89,15 +74,16 @@ if __name__ == "__main__":
     auth_client = globus.NativeAppAuthClient(CLIENT_ID)
     auth_client.oauth2_start_flow(refresh_tokens=True, requested_scopes=TransferScopes.all)
 
+    
     # Begin authorization via URL & User Input Code to Retrieve Token
-    ## TODO: Use the Refresh_Tokens to Enable SSO Authentication for 24-Hours
+    ## TODO: Use the Refresh_Tokens to Enable SSO Authentication for 24-Hours (work-around to avoid constant duofactor authentication)
     authorize_url = auth_client.oauth2_get_authorize_url()
     print(f"Please go to this URL and login:\n\n{authorize_url}\n")
     auth_code = input("Please enter the code here: ").strip()
     tokens = auth_client.oauth2_exchange_code_for_tokens(auth_code)
     transfer_tokens = tokens.by_resource_server["transfer.api.globus.org"]
 
-    # Construct the AccessTokenAuthorizer to Enable the TransferClient
+    # Construct the AccessTokenAuthorizer to Enable the TransferClient (tc)
     tc = globus.TransferClient(authorizer=globus.AccessTokenAuthorizer(transfer_tokens["access_token"]))
 
     # Set Up the Storage Collection and Compute Collection IDs
@@ -122,15 +108,13 @@ if __name__ == "__main__":
         #Initiate submissions doc, after we are sure that the job is likely to be launched successfully.
         submissionID = db.init_document("job_submissions",dataID,pipelineID=current_pipelineID)
         print("Created submissionID "+str(submissionID))
-        time_UTC = datetime.utcnow().isoformat()
         username = getpass.getuser()
-        db.patch("job_submissions",submissionID,data={"started_globus":time_UTC,"username":username})
+        db.patch("job_submissions",submissionID,data={"started_globus":time_start.isoformat(),"username":username})
     except:
         # Hopefully db will print all appropriate errors.
         # Here we want to exit if there are fundamental issues with the DB.
         # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
-        time_UTC = datetime.utcnow().isoformat()
-        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_start.isoformat(),"error":traceback.format_exc()}})
         exit()
                 
 
@@ -138,11 +122,11 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # Transfer Necessary Files to Compute FS
     # -----------------------------------------------        
-    stor_location = db_response['location_on_filesystem'] #!!! Does this need to be the file name or directory or both?
+    stor_location = # This line needs to be the full directory plus filename (if you provide only dir name it will transfer whole dir)!!!! -- query from TPPDB DATA
 
     # Construct the Location on Compute FS
     ## TODO: Finalize FS Structure on Compute
-    comp_location = db.dbconfig.globus_scratch_dir+"BLAHBLAHBLAH"
+    comp_location = db.dbconfig.globus_comp_dir
 
     # Transfer the Required files from Storage to Compute
     try:
@@ -154,7 +138,15 @@ if __name__ == "__main__":
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
 
-    manage_single_transfer(tc, storage, compute, stor_location, comp_location)
+
+    # Here is a main operation: Transfer data from storaget to compute location.
+    try:
+        fm.manage_single_transfer(tc, storage, compute, stor_location, comp_location)
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
 
     
     # -----------------------------------------------
@@ -163,7 +155,7 @@ if __name__ == "__main__":
 
     # Set up logging directory and file. !H!H!H need to get slurm to writ to this log!
     log_name = f"{time_start.year:04d}{time_start.month:02d}{time_start.day:02d}_{time_start.hour:02d}{time_start.minute:02d}{time_start.second:02d}_{submissionID}.log"
-    log_dir = #!H!H!H what do we make this?
+    log_dir = comp_location
     
     # Initiate outcome doc before job submission.
     # Also Initiate RESULTS document? -- I don't think so, it can be written at
@@ -203,8 +195,9 @@ if __name__ == "__main__":
 -s {} submission id
 -wd {} working dir
 "
-    
-    subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"tpp-\" --partition=thepartitiontouse --wrap=\" ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
+
+    # !!! NOTE THE -W below forces the sbatch sub-process to not finish until the batch job actually completes (with failure or success). 
+    subprocess.run(["sbatch","-W --time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"tpp-\" --partition=thepartitiontouse --wrap=\" ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
 
     # Communicate to TPP-Database that the SLURM Job has been Launched
 
@@ -212,16 +205,9 @@ if __name__ == "__main__":
 
     # Communicate to TPP-Database the Final Status of SLURM Job
 
-    try:
-        db.patch("job_submissions",submissionID,data={"log_name":log_name,"log_dir":log_dir})
-    except:
-        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
-        time_UTC = datetime.utcnow().isoformat()
-        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
-        exit()
-    
+    # !!!! NEED TO ADD A WAIT HERE AND HAVE IT LOOK FOR THE COMPLETED SLURM JOB
 
-        
+    
     
     # -----------------------------------------------
     # Transfer Products from Compute to Storage
@@ -236,14 +222,22 @@ if __name__ == "__main__":
         exit()
 
     #Construct the Location on Compute FS of Products
+    #!!! THIS BLOCK should find the hdf5 file and related plots that were produced and then transfer them. MAKE SURE IT KNOWS WHAT THE FULL FILE NAME/DIR TO LOOK FOR.
     comp_location_hdf5 = db.dbconfig.globus_comp_dir+"BLAHBLAHBLAH"+".hdf5"
 
     #Construct the Location on Storage FS of Products
+    #!!!! Add algorithm here to determine final output directory which will ultimately be on tingle (but temporarily can be wherever for testing)
     stor_location_hdf5 = db.dbconfig.globus_res_dir+"/BLAHBLAHBLAH"+".hdf5"
 
     #Transfer the Final Products from Compute to Storage
-    manage_single_transfer(tc, compute, storage, comp_location_hdf5, stor_location_hdf5)
-
+    try:
+        fm.manage_single_transfer(tc, compute, storage, comp_location_hdf5, stor_location_hdf5)
+    except:
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+        
     time_end = utc.datetime()
 
     delta_time = time_end - time_start
