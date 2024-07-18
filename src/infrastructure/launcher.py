@@ -136,7 +136,7 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # Transfer Necessary Files to Compute FS
     # -----------------------------------------------        
-    stor_location = db_response['location_on_filesystem']
+    stor_location = db_response['location_on_filesystem'] #!!! Does this need to be the file name or directory or both?
 
     # Construct the Location on Compute FS
     ## TODO: Finalize FS Structure on Compute
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     # Transfer the Required files from Storage to Compute
     try:
         time_UTC = datetime.utcnow().isoformat()
-        db.patch("job_submissions",submissionID,data={"started_transfer_data":time_UTC})
+        db.patch("job_submissions",submissionID,data={"started_transfer_data":time_UTC,"target_directory":comp_location})
     except:
         # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
         time_UTC = datetime.utcnow().isoformat()
@@ -182,7 +182,25 @@ if __name__ == "__main__":
     # Need to figure out how to pass to tpp_pipeline at least the outcomeID relevant to this job.
     #!H!H!H
     # Use command line to call slurm.
-    #subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"Reshma\" --partition=thepartitiontouse --wrap=\"SINGULARITY CALL ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
+
+    #SBATCH --nodes=1  # number of nodes
+    #SBATCH --ntasks-per-node=10
+    #SBATCH --partition=comm_gpu_inter 
+    #SBATCH --gres=gpu:1
+    #SBATCH --gpu_cmode=shared
+    #SBATCH --job-name=TPP_pipeline
+    #SBATCH --mail-user=rat0022@mix.wvu.edu
+    #SBATCH --mail-type BEGIN,END,FAIL
+
+    tpp_pipe = #!!! THE LOCATION OF tpp_pipeline.py
+
+    slurm_settings = f"--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-{submissionID}\" --partition=comm_gpu_week --gres=gpu:1 --mail-user={username}@mix.wvu.edu --mail-type BEGIN,END,FAIL --wrap=\"singularity exec /shared/containers/radio_transients/radio_transients.sif {tpp_pipe}
+-f {} filename  !!! NEED TO ADD these arguments to tpp_pipeline and make sure we have the right values here.
+-s {} submission id
+-wd {} working dir
+"
+    
+    subprocess.run(["sbatch","--time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"tpp-\" --partition=thepartitiontouse --wrap=\" ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
 
     # Communicate to TPP-Database that the SLURM Job has been Launched
 

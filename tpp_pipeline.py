@@ -112,7 +112,8 @@ def do_candcsvmaker(your_fil_object):
     candcsvmaker_start = timer()
     logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
     fil_file=your_fil_object.your_header.filename
-    os.system('python ../candcsvmaker.py -v -f ../'+str(fil_file)+' -c *cand')
+    # The threshold values below are set to let heimdall, your, and fetch control what gets through.
+    os.system('python ../candcsvmaker.py --snr_th 0 --dm_min_th 0 --dm_max_th 10000 --clustersize_th 0 -v -f ../'+str(fil_file)+' -c *cand')
     #!RESHMA: Do we really need to include the pandas package just to read a csv? I wonder if we could avoid this dependancy and use something more common/portable. Or do you feel pandas is a good way to go?
     candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
     num_cands=str(candidates.shape[0])
@@ -233,11 +234,19 @@ if __name__ == "__main__":
     logger.info("My database writer value is "+str(values.tpp_db))
     db_on = False
     if values.tpp_db is not None:
-        db_password = values.tpp_db
+        db_password = values.tpp_db[0]
+        outcomesID = values.tpp_db[1]
+        working_dir = values.tpp_db[2]
         if (db_password != "mastersword"):
             logger.error("******************************************************************")
             logger.error("***** It looks like you tried to turn on the TPP Manager but *****")
             logger.error("*****        provided the wrong password. Exiting now.       *****")
+            logger.error("******************************************************************")
+            exit()
+        elif (len(values.tpp_db) < 3):
+            logger.error("******************************************************************")
+            logger.error("***** It looks like you tried to turn on the TPP Manager but *****")
+            logger.error("***** didn't provide pw, outcomesID, directory. Exiting now. *****")
             logger.error("******************************************************************")
             exit()
         elif (db_password == "mastersword"):
@@ -246,6 +255,8 @@ if __name__ == "__main__":
             logger.warning("*****      If this is unintentional, abort your run now.     *****")
             logger.warning("******************************************************************")
             db_on = True
+            logger.debug("Changing to the directory provided by TPP-DB interface, " + working_dir)
+            os.chdir(working_dir)
 
         # Test basic TPPDB connection and existence of outcomesID.
         try:
@@ -257,7 +268,7 @@ if __name__ == "__main__":
     else:
         logger.info("No connections will be made to TPP Database Manager.")
         db_on = False
-        
+
 
     # Determine node_name and current working directory.
     node_name = os.uname()[1]
@@ -383,11 +394,12 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
      
     logger.info('CHECKPOINT: Number of candidates created = '+num_cands)
 
-    #!HTPPDB: I think this is a good place to determine and update 
+    #TPPDB: I think this is a good place to determine and update 
     #TPPDB: fetch_histogram (or perhaps we can get candcsvmaker to report it to
     #TPPDB: avoid re-reading the csv file). Same goes for n_members,
     #TPPDB: n_detections, n_candidates. I think we could easily add an accounting
     #TPPDB: of those things all into candcsvmaker.py.
+    !H CHECKING INTO CANDCSVMAKER.PY TO SEE IF THIS IS STRAIGHT FORWARD.
 
     #Create a directory for the h5s
     # RESHMA can you check the directory tracing here? Why are we making an h5 directory and is it appropriately used below? Is this a folder that your_candmaker explicitly needs but doesn't create itself?
