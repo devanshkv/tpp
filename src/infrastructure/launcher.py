@@ -33,7 +33,6 @@ THERE ARE SEVERAL REASONS LAUNCHER SHOULD FORCE-FAIL:
 # -----------------------------------------------
 # General Module Imports
 # -----------------------------------------------
-import requests   # Allow communications with TPP-DB API.#!!!! Superceded by db functionality
 import subprocess # To call sbatch/slurm.
 import yaml       # For reading private authentication data.
 import globus_sdk as globus
@@ -104,6 +103,9 @@ if __name__ == "__main__":
 
         # Test that the requested dataID exists.
         db_response = db.get("data",dataID)
+        file_dir = db_response['location_on_filesystem']
+        file_base = db_response['regex_filename']
+        file_location = file_base + file_dir
 
         #Initiate submissions doc, after we are sure that the job is likely to be launched successfully.
         submissionID = db.init_document("job_submissions",dataID,pipelineID=current_pipelineID)
@@ -122,7 +124,8 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # Transfer Necessary Files to Compute FS
     # -----------------------------------------------        
-    stor_location = # This line needs to be the full directory plus filename (if you provide only dir name it will transfer whole dir)!!!! -- query from TPPDB DATA
+    stor_location = file_base + file_dir
+    print("Will transfer file from " + stor_location)
 
     # Construct the Location on Compute FS
     ## TODO: Finalize FS Structure on Compute
@@ -153,7 +156,7 @@ if __name__ == "__main__":
     # Launch the TPP Pipeline via the SLURM Command
     # -----------------------------------------------
 
-    # Set up logging directory and file. !H!H!H need to get slurm to writ to this log!
+    # Set up logging directory and file. !H!H!H need to get slurm to write to this log!
     log_name = f"{time_start.year:04d}{time_start.month:02d}{time_start.day:02d}_{time_start.hour:02d}{time_start.minute:02d}{time_start.second:02d}_{submissionID}.log"
     log_dir = comp_location
     
