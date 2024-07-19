@@ -78,7 +78,7 @@ def gencandcsv(
             file,
             header=None,
             comment="#",
-            delim_whitespace=True,
+            sep='\s+',
             names=[
                 "snr",
                 "ssample",
