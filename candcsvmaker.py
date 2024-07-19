@@ -99,13 +99,13 @@ def gencandcsv(
             & (cands["cluster_size"] >= clustersize_th)
         ]
 
-        # Add to tally of members and events after filtering.
+        # Add to tally of members and events after filtering. TRYING TO TEST THIS NOW ON THORNY FLAT. GOT RESHMAS CAND DATA.
 
-        n_members += cands["cluster_size"]
+        n_members += sum(cands_filtered["cluster_size"])
         print("Now I have "+str(n_members) + " members.")
 
-        n_events += len(cands_filtered)
-        print("Now I have "+str(n_members) + " events.")
+        n_events += len(cands_filtered["snr"])
+        print("Now I have "+str(n_events) + " events.")
 
 
         if len(cands_filtered) == 0:
