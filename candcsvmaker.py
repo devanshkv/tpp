@@ -102,7 +102,7 @@ def gencandcsv(
         # Add to tally of members and events after filtering.
         n_members += sum(cands_filtered["cluster_size"])
         n_events += len(cands_filtered["snr"])
-        logger.info("I found " + str(n_events) + " events with " + str(n_members) + " members."
+        logger.info("I found " + str(n_events) + " events with " + str(n_members) + " members.")
 
         if len(cands_filtered) == 0:
             logger.info(f"No candidate passes the threshold criterion in {file}")
@@ -118,7 +118,6 @@ def gencandcsv(
             logger.debug(f"Writing candidates in {file} to {outname}")
             cands_out.to_csv(outname, mode="a", header=False, index=False)
 
-        return n_events,n_members
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -190,7 +189,7 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.INFO, format=logging_format)
 
-    n_events,n_members = gencandcsv(
+    gencandcsv(
         values.heim_cands,
         values.fin,
         outname=values.fout,
