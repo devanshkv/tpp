@@ -102,7 +102,7 @@ def gencandcsv(
         # Add to tally of members and events after filtering.
         n_members += sum(cands_filtered["cluster_size"])
         n_events += len(cands_filtered["snr"])
-
+        logger.info("I found " + str(n_events) + " events with " + str(n_members) + " members."
 
         if len(cands_filtered) == 0:
             logger.info(f"No candidate passes the threshold criterion in {file}")
@@ -201,4 +201,3 @@ if __name__ == "__main__":
         dm_max=values.dm_max_th,
     )
 
-    return n_events,n_members
