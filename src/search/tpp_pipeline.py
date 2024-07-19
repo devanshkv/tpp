@@ -59,7 +59,7 @@ def tpp_state(status):
         # POST UPDATE.
         data={"job_state_time":time_now,
               "job_state": status}
-        db.patch("processing_outcomes",outcomesID,data=data)
+        db.patch("processing_outcomes",outcomeID,data=data)
     except:
         print_dberr()
         
@@ -97,6 +97,15 @@ def do_RFI_filter(filenames,basename):
     return len(my_list)
 
 def do_heimdall(your_fil_object):
+    """.
+
+    Heimdall performs GPU-based dedispersion and a basic clustering
+    and event rejection algorithm.
+
+    It produces .cand files populated with meta-data for individual
+    events, including peak DM, S/N, number of clusters, etc.
+
+    """
     heimdall_start=timer()
     logger.info("HEIMDALL:Using the RFI mitigated filterbank file " + str(your_fil_object.your_header.filename)+" for Heimdall")
     logger.info("HEIMDALL:Preparing to run Heimdall..\n")
@@ -109,6 +118,14 @@ def do_heimdall(your_fil_object):
     logger.debug('HEIMDALL: your_heimdall.py took '+str(heimdall_end-heimdall_start)+' s')
 
 def do_candcsvmaker(your_fil_object):
+    """.
+
+    candcsvmaker.py has a simple function: create one big csv file
+    with all of the candidates inside of it.
+
+    It produces a file called (input-file-base-name).csv
+
+    """
     candcsvmaker_start = timer()
     logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
     fil_file=your_fil_object.your_header.filename
@@ -235,7 +252,7 @@ if __name__ == "__main__":
     db_on = False
     if values.tpp_db is not None:
         db_password = values.tpp_db[0]
-        outcomesID = values.tpp_db[1]
+        outcomeID = values.tpp_db[1]
         working_dir = values.tpp_db[2]
         if (db_password != "mastersword"):
             logger.error("******************************************************************")
@@ -246,7 +263,7 @@ if __name__ == "__main__":
         elif (len(values.tpp_db) < 3):
             logger.error("******************************************************************")
             logger.error("***** It looks like you tried to turn on the TPP Manager but *****")
-            logger.error("***** didn't provide pw, outcomesID, directory. Exiting now. *****")
+            logger.error("*****  didn't provide pw, outcomeID, directory. Exiting now. *****")
             logger.error("******************************************************************")
             exit()
         elif (db_password == "mastersword"):
@@ -258,9 +275,11 @@ if __name__ == "__main__":
             logger.debug("Changing to the directory provided by TPP-DB interface, " + working_dir)
             os.chdir(working_dir)
 
-        # Test basic TPPDB connection and existence of outcomesID.
+        # Test basic TPPDB connection and existence of outcomeID.
         try:
-            db.get("processing_outcomes",outcomesID)
+            outcome_doc = db.get("processing_outcomes",outcomeID)
+            submissionID = outcome_doc['submissionID']
+            dataID = outcome_doc['dataID']
         except:
             print_dberr()
             exit()
@@ -279,7 +298,7 @@ if __name__ == "__main__":
         try:
             data = {"node_name":node_name,
                     "job_start":time_start_UTC.isoformat()}
-            db.patch("processing_outcomes",outcomesID,data=data)
+            db.patch("processing_outcomes",outcomeID,data=data)
         except:
             print_dberr()
 
@@ -319,7 +338,7 @@ if __name__ == "__main__":
     if (db_on):
         try:
             data = {"rfi_fraction":rfi_fraction}
-            db.patch("processing_outcomes",outcomesID,data=data)
+            db.patch("processing_outcomes",outcomeID,data=data)
         except:
             print_dberr()
 
@@ -512,6 +531,32 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     #TPPDB: handles the transfer and disk management.
     
     #TPPDB: at any point of failure above, the job_end should be updated and job_state should be updated to "ERROR: " with a relevant message.
+
+
+    
+    ############## ############## ############## 
+    ########## SUBMIT CANDS TO DATABASE ######## 
+    ############## ############## ############## 
+
+    #!!! Here need a "write results to a file if db connection not
+    #!!! happening successfully." We don't want to lose candidate
+    #!!! records at this stage!
+
+    
+    n_push_success = 0
+    if (db_on):
+        
+        for all candidates:
+            # Populate candidate TPPDB data. Does this need to be done earlier?
+            data = {'outcomeID':outcomeID,
+                    'submissionID':submissionID,
+                    'dataID':dataID}
+            try:
+                
+            except:
+                print_dberr()
+            else:
+                n_push_success += 1
 
 
     ############## ############## ############## 
