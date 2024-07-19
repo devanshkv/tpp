@@ -32,7 +32,7 @@ from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
 import database as db #TPPDB: This line needs to be fixed.
-#TPPDB: Here we will need to fix the line that imports the db comms library.
+import candcsvmaker
 import traceback
 
 def print_dberr():
@@ -129,14 +129,28 @@ def do_candcsvmaker(your_fil_object):
     candcsvmaker_start = timer()
     logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
     fil_file=your_fil_object.your_header.filename
+    file_list = "../"+str(fil_file)
     # The threshold values below are set to let heimdall, your, and fetch control what gets through.
-    os.system('python ../candcsvmaker.py --snr_th 0 --dm_min_th 0 --dm_max_th 10000 --clustersize_th 0 -v -f ../'+str(fil_file)+' -c *cand')
-    #!RESHMA: Do we really need to include the pandas package just to read a csv? I wonder if we could avoid this dependancy and use something more common/portable. Or do you feel pandas is a good way to go?
-    candidates=pd.read_csv(str(your_fil_object.your_header.basename)+".csv")
-    num_cands=str(candidates.shape[0])
+    n_events,n_members = candcsvmaker.gencandcsv(candsfiles="*.cand",filelist=file_list,snr_th=0,clustersize_th=0,dm_min=0,dm_max=10000,label=1)
+
+    #!!!RESHMA, GRAHAM, BIKASH AND OTHERS: Large change here, I changed
+    #! candcsvmaker to directly call the source function from the code
+    #! (candcsvmaker.py was just a "main" input parser around the core
+    #! function gencandcsv). However, this new modality is untested and
+    #! we should make sure it's working on a rerun of this.
+    #!
+    #! Secondly, I have set the thresholds to zero for candcsvmaker to
+    #! avoid unwanted filtering of candidates, which should be
+    #! controlled by us explicitly throughout the pipeline. This extra
+    #! layer of filtering seems redundant, given that these values
+    #! should be controlled by heimdall, I believe? Is that right?
+    #os.system('python ../candcsvmaker.py --snr_th 0 --dm_min_th 0 --dm_max_th 10000 --clustersize_th 0 -v -f ../'+str(fil_file)+' -c *cand')
+
     candcsvmaker_end = timer()
-    logger.debug('CANDMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
-    return num_cands
+    logger.debug('CANDCSVMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
+    logger.debug('CANDCSVMAKER: found ' + str(n_events) ' events with ' + str(n_members) + ' members.')
+
+    return n_events,n_members
 
 def do_your_candmaker(your_fil_object):
     candmaker_start=timer()
@@ -401,7 +415,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
     try:
-        num_cands = do_candcsvmaker(your_fil_object)
+        n_events,n_members = do_candcsvmaker(your_fil_object)
     except:
         if (db_on):
             status = "ERROR in candcsvmaker: "+str(traceback.format_exc())
@@ -410,15 +424,18 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             logger.error(str(traceback.format_exc()))
         exit()
 
-     
-    logger.info('CHECKPOINT: Number of candidates created = '+num_cands)
+    # POST UPDATE of n_events and n_members
+    if (db_on):
+        try:
+            data={"n_detections": n_events,
+                  "n_members": n_members}
+            db.patch("processing_outcomes",outcomeID,data=data)
+        except:
+            print_dberr()
 
-    #TPPDB: I think this is a good place to determine and update 
-    #TPPDB: fetch_histogram (or perhaps we can get candcsvmaker to report it to
-    #TPPDB: avoid re-reading the csv file). Same goes for n_members,
-    #TPPDB: n_detections, n_candidates. I think we could easily add an accounting
-    #TPPDB: of those things all into candcsvmaker.py.
-    !H CHECKING INTO CANDCSVMAKER.PY TO SEE IF THIS IS STRAIGHT FORWARD.
+     
+    logger.info('CHECKPOINT: Number of candidates created = '+num_events)
+
 
     #Create a directory for the h5s
     # RESHMA can you check the directory tracing here? Why are we making an h5 directory and is it appropriately used below? Is this a folder that your_candmaker explicitly needs but doesn't create itself?
