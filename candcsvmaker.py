@@ -118,6 +118,8 @@ def gencandcsv(
             logger.debug(f"Writing candidates in {file} to {outname}")
             cands_out.to_csv(outname, mode="a", header=False, index=False)
 
+    return n_events,n_members
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
