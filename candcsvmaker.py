@@ -99,13 +99,9 @@ def gencandcsv(
             & (cands["cluster_size"] >= clustersize_th)
         ]
 
-        # Add to tally of members and events after filtering. TRYING TO TEST THIS NOW ON THORNY FLAT. GOT RESHMAS CAND DATA.
-
+        # Add to tally of members and events after filtering.
         n_members += sum(cands_filtered["cluster_size"])
-        print("Now I have "+str(n_members) + " members.")
-
         n_events += len(cands_filtered["snr"])
-        print("Now I have "+str(n_events) + " events.")
 
 
         if len(cands_filtered) == 0:
@@ -122,6 +118,7 @@ def gencandcsv(
             logger.debug(f"Writing candidates in {file} to {outname}")
             cands_out.to_csv(outname, mode="a", header=False, index=False)
 
+        return n_events,n_members
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -193,7 +190,7 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.INFO, format=logging_format)
 
-    gencandcsv(
+    n_events,n_members = gencandcsv(
         values.heim_cands,
         values.fin,
         outname=values.fout,
@@ -203,3 +200,5 @@ if __name__ == "__main__":
         dm_min=values.dm_min_th,
         dm_max=values.dm_max_th,
     )
+
+    return n_events,n_members
