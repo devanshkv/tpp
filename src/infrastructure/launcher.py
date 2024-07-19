@@ -43,6 +43,7 @@ from datetime import datetime
 import getpass
 import traceback
 import file_manager as fm
+import random
 
 
 # -----------------------------------------------
@@ -86,11 +87,61 @@ if __name__ == "__main__":
     tc = globus.TransferClient(authorizer=globus.AccessTokenAuthorizer(transfer_tokens["access_token"]))
 
     # Set Up the Storage Collection and Compute Collection IDs
-    storage = db.dbconfig.globus_stor_id
-    compute = db.dbconfig.globus_comp_id
+    storage_id = db.dbconfig.globus_stor_id
+    compute_id = db.dbconfig.globus_comp_id
+
+
+    # Construct the Location on Compute FS
+    #   (This is the working directory that the file will be
+    #   transferred to, and where tpp_pipeline will initiate its
+    #   processing)
+    ## TODO: Finalize FS Structure on Compute
+    comp_location = db.dbconfig.globus_comp_dir
 
 
 
+    # Construct the Location on Compute FS of Products.
+    #   (This is the working directory location of all tpp_pipeline
+    #   results, from which we will transfer to permanent storage)
+    comp_location_final = db.dbconfig.globus_comp_dir+"/"#+!!! RESHMA what is the name of the directory where the final results come out? Check (or fix tpp_pipeline) after testing.
+
+    
+    # Construct the Location on Storage FS of Products
+    #   (This is the final storage directory on Tingle)
+    """.
+
+    Because we'll be processing on Thorny Flat or Dolly Sods, there's
+    no clear way here to access Tingle to auto-query which directory
+    the results should be in.  Here is our solution:
+
+      - In 1 PB of data, with around 15GB per file, there will be
+        O(100000) outcomes directories. There will be more outcomes if
+        we process any files multiple times or if file sizes are
+        typically smaller.
+
+      - If we have 500 random result directory divisions (labelled
+        001, 002, etc.), there will be about 200 outcome directories
+        per division. Lots of wiggle room for more to be in a
+        particular division.
+
+      - We can randomly generate a number between 1 and 400,
+        sprinkling the results semi-evenly into the directories.
+
+      - The output directory will be named for the outcomeID.
+
+      - The randomizer defining "divisions" below can always be
+        changed, so if for some reason 500 divisions aren't enough and
+        we get overcrowding, we can always change this much later in
+        the processing.
+
+    Signed - Sarah, who you can blame if this is a bad decision.
+
+    """
+    result_division = random.randrange(1,500,1)
+    stor_location_final = db.dbconfig.globus_res_dir+"/"+str(result_division)+"/"+outcomeID
+
+
+    
     # -----------------------------------------------
     # Set up TPP-DB connections
     # -----------------------------------------------
@@ -127,10 +178,6 @@ if __name__ == "__main__":
     stor_location = file_base + file_dir
     print("Will transfer file from " + stor_location)
 
-    # Construct the Location on Compute FS
-    ## TODO: Finalize FS Structure on Compute
-    comp_location = db.dbconfig.globus_comp_dir
-
     # Transfer the Required files from Storage to Compute
     try:
         time_UTC = datetime.utcnow().isoformat()
@@ -142,9 +189,9 @@ if __name__ == "__main__":
         exit()
 
 
-    # Here is a main operation: Transfer data from storaget to compute location.
+    # Here is a main operation: Transfer data from storage to compute location.
     try:
-        fm.manage_single_transfer(tc, storage, compute, stor_location, comp_location)
+        fm.manage_single_transfer(tc, storage_id, compute_id, stor_location, comp_location)
     except:
         # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
         time_UTC = datetime.utcnow().isoformat()
@@ -195,8 +242,7 @@ if __name__ == "__main__":
 
     slurm_settings = f"--time={max_jobtime} --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-{submissionID}\" --partition=comm_gpu_week --gres=gpu:1 --mail-user={username}@mix.wvu.edu --mail-type BEGIN,END,FAIL --wrap=\"singularity exec /shared/containers/radio_transients/radio_transients.sif {tpp_pipe}
 -f {} filename  !!! NEED TO ADD these arguments to tpp_pipeline and make sure we have the right values here.
--s {} submission id
--wd {} working dir
+-tppdb mastersword {outcomeID} {comp_location}
 "
 
     # !!! NOTE THE -W below forces the sbatch sub-process to not finish until the batch job actually completes (with failure or success). 
@@ -224,17 +270,13 @@ if __name__ == "__main__":
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
 
-    #Construct the Location on Compute FS of Products
-    #!!! THIS BLOCK should find the hdf5 file and related plots that were produced and then transfer them. MAKE SURE IT KNOWS WHAT THE FULL FILE NAME/DIR TO LOOK FOR.
-    comp_location_hdf5 = db.dbconfig.globus_comp_dir+"BLAHBLAHBLAH"+".hdf5"
-
-    #Construct the Location on Storage FS of Products
-    #!!!! Add algorithm here to determine final output directory which will ultimately be on tingle (but temporarily can be wherever for testing)
-    stor_location_hdf5 = db.dbconfig.globus_res_dir+"/BLAHBLAHBLAH"+".hdf5"
 
     #Transfer the Final Products from Compute to Storage
+    #TODO !!! Joe, below here we need the transfer to actually transfer
+    # everything from the directory to the target location. Can we do
+    # that with manage_single_transfer as written?    
     try:
-        fm.manage_single_transfer(tc, compute, storage, comp_location_hdf5, stor_location_hdf5)
+        fm.manage_single_transfer(tc, compute_id, storage_id, comp_location_final, stor_location_final)
     except:
         # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
         time_UTC = datetime.utcnow().isoformat()
@@ -248,39 +290,14 @@ if __name__ == "__main__":
     
     try:
         time_UTC = datetime.utcnow().isoformat()
-        db.patch("job_submissions",submissionID,data={"status":{"competed":True,"date_of_completion":time_UTC},"duration":duration_minutes})
+        db.patch("job_submissions",submissionID,data={"status":{"competed":True,"date_of_completion":time_UTC},"duration":duration_minutes,"output_directory":stor_location_final})
     except:
         # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
         time_UTC = datetime.utcnow().isoformat()
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
 
+    #!!! JOE, how/when will all the data be cleaned up in the end? Will we just have a bunch of copies? Do we need to write a clean-up script after processing is done? Should this be separate?
+    #(note for sarah self, this will affect where we write slurm logs to)
+    #(note, this will also affect peoples ability to follow up on issues. maybe we don't do clean-up if we are still in the testing phase but turn auto-clean-up on later.)
 
-
-    
-# CUSTOM CONFIG FILE FUNCTIONALITY not yet allowed or implemented. It remains here as a historical relic.
-#config    parser.add_argument('--config', '-c', dest='config_file', type=str, default=None,
-#config                        help="The user-specific Configuration File required for the pipeline (USUALLY YOU SHOUDL NOT SPECIFY THIS. By default user's config.yml will be read from the TPP pipeline install directory.", required=False)
-#config    # Configuration YAML provided by the user (contains tokens, networking settings, etc)
-#config    config_file = args.config_file
-#config    if config_file == None:
-#config        config_file = input("Please enter the absolute path of your TPP Configuration File: ").strip()
-#config
-#config    # Read config file for authentication info
-#config    with open(config_file, 'r') as file:
-#config        config = yaml.safe_load(file)
-#config
-#config    # Set Required Variables
-#config    tppdb_ip = config['tpp-db']['url']
-#config    tppdb_port = config['tpp-db']['port']
-#config    user_token = config['tpp-db']['token']
-#config    # -----------------------------------------------
-#config    # TPP-Database Communication Configuration
-#config    # -----------------------------------------------
-#config    tppdb_base = "http://" + tppdb_ip + ":" + tppdb_port
-#config    tppdb_data = tppdb_base + "/data"
-#config    headers = {"Authorization": f"Bearer{user_token}"}
-#config    CLIENT_ID = config['globus']['client_id']
-#config    storage = config['globus']['storage_collection_id']
-#config    compute = config['globus']['compute_collection_id']
-#config    comp_location = config['globus']['compute_scratch_dir']+"BLAHBLAHBLAH"

@@ -210,8 +210,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--tpp_db",
-        help="Turn on updating to database manager. THIS IS FOR TPP OFFICIAL USE ONLY. To avoid mistaken turn-on, you must include the following argument to turn it on for real: mastersword",
+        help="Turn on updating to database manager. THIS IS FOR TPP OFFICIAL USE ONLY. To avoid mistaken turn-on, you must include the following arguments to turn it on for real: mastersword outcomeID working_dir",
         required=False,
+        nargs=3
     )
     parser.add_argument(
         "-v",
