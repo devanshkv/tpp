@@ -157,7 +157,9 @@ if __name__ == "__main__":
         file_dir = db_response['location_on_filesystem']
         file_base = db_response['regex_filename']
         file_location = file_base + file_dir
-
+        #TODO Joe how will globus respond to a regex filename? How can we deal with this if there are multiple files? While we're on it... How can we check that all the data was successfully transferred? We will have all of the md5 hashes to know how big the files should be from source, in case that helps.
+        #TODO Joe (and sarah) when passing a regex string will this cause issues to e.g. subprocess? Do special characters like ? or * need us to add some kind of "escape" \ symbol or something?
+        
         #Initiate submissions doc, after we are sure that the job is likely to be launched successfully.
         submissionID = db.init_document("job_submissions",dataID,pipelineID=current_pipelineID)
         print("Created submissionID "+str(submissionID))
@@ -223,40 +225,39 @@ if __name__ == "__main__":
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
     
-    # Need to figure out how to pass to tpp_pipeline at least the outcomeID relevant to this job.
-    #!H!H!H
-    # Use command line to call slurm.
-
-    #SBATCH --nodes=1  # number of nodes
-    #SBATCH --ntasks-per-node=10
-    #SBATCH --partition=comm_gpu_inter 
-    #SBATCH --gres=gpu:1
-    #SBATCH --gpu_cmode=shared
-    #SBATCH --job-name=TPP_pipeline
-    #SBATCH --mail-user=rat0022@mix.wvu.edu
-    #SBATCH --mail-type BEGIN,END,FAIL
-
     tpp_pipe = #!!! THE LOCATION OF tpp_pipeline.py
 
     max_jobtime = 5760 # Set jobs to force fail after 4 full days of processing.
 
-    slurm_settings = f"--time={max_jobtime} --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-{submissionID}\" --partition=comm_gpu_week --gres=gpu:1 --mail-user={username}@mix.wvu.edu --mail-type BEGIN,END,FAIL --wrap=\"singularity exec /shared/containers/radio_transients/radio_transients.sif {tpp_pipe}
--f {} filename  !!! NEED TO ADD these arguments to tpp_pipeline and make sure we have the right values here.
--tppdb mastersword {outcomeID} {comp_location}
-"
+    # !!!! EMAIL PER JOB HERE INCLUDED HERE ONLY FOR TESTING PURPOSES! We can turn this off after we know launcher is working.
+    # The -W option in sbatch forces the sub-process to not finish until the batch job actually completes (with failure or success).
+    sbatch_command = "sbatch -W --time=5800 --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-"+submissionID+"\" --partition=comm_gpu_week --gres=gpu:1 --mail-user="+username+"@mix.wvu.edu --mail-type=BEGIN,END,FAIL 
+    -o \"" + log_dir + log_name + "\" --wrap='singularity exec /shared/containers/radio_transients/radio_transients.sif "+tpp_pipe+" -tppdb mastersword " + outcomeID + " " + comp_location + " -f " + file_base + "'"
 
-    # !!! NOTE THE -W below forces the sbatch sub-process to not finish until the batch job actually completes (with failure or success). 
-    subprocess.run(["sbatch","-W --time=5-23:45:00 --nodes=1 --ntasks-per-node=10 --job-name=\"tpp-\" --partition=thepartitiontouse --wrap=\" ; COMMAND TO RUN"]) ###### NEED TO FIX THIS
+    # Report intended launch command.
+    print("\n\nI'm launching the following sbatch command and will wait until it completes fully before continuing:\n")
+    print(sbatch_command)
+    print("\n\n")
+
+    # Launch to slurm
+    try:
+        sbatch_response = subprocess.getoutput(sbatch_command)
+    except:
+        print("\n\nMAJOR ERROR: SBATCH SUBMISSION FAILED.\n\n")
+        # Send error to submissionID STATUS. This will only work if there isn't a tppdb comms error.
+        time_UTC = datetime.utcnow().isoformat()
+        db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
+        exit()
+
+
+    print(sbatch_response)
+    print("The job submitted through sbatch has completed with the response printed above.") 
+
 
     # Communicate to TPP-Database that the SLURM Job has been Launched
-
     # Wait for Slurm Job to Complete, Alerting any Errors
-
     # Communicate to TPP-Database the Final Status of SLURM Job
 
-    # !!!! NEED TO ADD A WAIT HERE AND HAVE IT LOOK FOR THE COMPLETED SLURM JOB
-
-    
     
     # -----------------------------------------------
     # Transfer Products from Compute to Storage
