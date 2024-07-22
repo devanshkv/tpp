@@ -225,7 +225,7 @@ if __name__ == "__main__":
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
     
-    tpp_pipe = #!!! THE LOCATION OF tpp_pipeline.py
+    tpp_pipe = "../../tpp_pipeline.py" #!!! THE LOCATION OF tpp_pipeline.py--needs to be self-referenced in the code or imported maybe?
 
     max_jobtime = 5760 # Set jobs to force fail after 4 full days of processing.
 
