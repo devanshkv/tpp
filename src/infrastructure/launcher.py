@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     # !!!! EMAIL PER JOB HERE INCLUDED HERE ONLY FOR TESTING PURPOSES! We can turn this off after we know launcher is working.
     # The -W option in sbatch forces the sub-process to not finish until the batch job actually completes (with failure or success).
-    sbatch_command = "sbatch -W --time=5800 --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-"+submissionID+"\" --partition=comm_gpu_week --gres=gpu:1 --mail-user="+username+"@mix.wvu.edu --mail-type=BEGIN,END,FAIL -o \"" + log_dir + log_name + "\" --wrap='singularity exec /shared/containers/radio_transients/radio_transients.sif "+tpp_pipe+" -tppdb mastersword " + outcomeID + " " + comp_location + " -f " + file_base + "'"
+    sbatch_command = "sbatch -W --time=5800 --nodes=1 --ntasks-per-node=10 --job-name=\"TPP-"+submissionID+"\" --partition=comm_gpu_week --gres=gpu:1 --mail-user="+username+"@mix.wvu.edu --mail-type=BEGIN,END,FAIL -o \"" + log_dir + log_name + "\" --wrap='module load singularity ; singularity exec /shared/containers/radio_transients/radio_transients.sif "+tpp_pipe+" -tppdb mastersword " + outcomeID + " " + comp_location + " -f " + file_base + "'"
 
     # Report intended launch command.
     print("\n\nI'm launching the following sbatch command and will wait until it completes fully before continuing:\n")
