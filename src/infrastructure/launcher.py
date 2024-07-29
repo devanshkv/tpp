@@ -152,6 +152,12 @@ if __name__ == "__main__":
         # Check that the current pipeline is being run (and test of TPPDB connection).
         current_pipelineID = db.current_pipelineID()
 
+        #!!! We might be able to at least check that tpp_pipeline.py
+        #!!! and other "tpp" package software is current by looking at
+        #!!! the "githash" We get this has by running:
+        #!!!       git rev-parse HEAD
+        #!!! (in the main tpp code directory, not a subdirectory)
+
         # Test that the requested dataID exists.
         db_response = db.get("data",dataID)
         file_dir = db_response['location_on_filesystem']

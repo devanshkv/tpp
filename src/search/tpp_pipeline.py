@@ -35,6 +35,22 @@ import database as db #TPPDB: This line needs to be fixed.
 import candcsvmaker
 import traceback
 
+"""
+
+
+TPPDB in case of DB communication issue, Bikash recommends writing the
+desired "push" dictionaries to a file (and maybe transferring it to
+tingle.) These could be regularly sucked over to tingle by some other
+external cron job running on TF/DS and then pushed from tingle (from a
+separate cron), or they could be attempted to be directly pushed by a
+cron job on TF/DS for each user directly onto TPPDB. However, perhaps
+the user's home directory should contain a folder that is the nominal
+static end location for that kind of thing.
+
+
+"""
+
+
 def print_dberr():
     logger.error("*****DB COMMUNICATIONS ERROR, could not push to database.*****")
     logger.error("**************************************************************")
