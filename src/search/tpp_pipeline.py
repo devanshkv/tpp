@@ -146,8 +146,16 @@ def do_candcsvmaker(your_fil_object):
     logger.info('CANDCSVMAKER:Creating a csv file to get all the info from all the cand files...\n')
     fil_file=your_fil_object.your_header.filename
     file_list = "../"+str(fil_file)
+
+    # Expand out file list and cand list before passing to candcsvmaker.
+    pattern = r".*\.cand$"
+    cand_file_list = []
+    for filename in os.listdir("./"):
+        if re.search(pattern,filename):
+            cand_file_list.append(filename)
+    
     # The threshold values below are set to let heimdall, your, and fetch control what gets through.
-    n_events,n_members = candcsvmaker.gencandcsv(candsfiles="*.cand",filelist=file_list,snr_th=0,clustersize_th=0,dm_min=0,dm_max=10000,label=1)
+    n_events,n_members = candcsvmaker.gencandcsv(candsfiles=cand_file_list,filelist=file_list,snr_th=0,clustersize_th=0,dm_min=0,dm_max=10000,label=1)
 
     #!!!RESHMA, GRAHAM, BIKASH AND OTHERS: Large change here, I changed
     #! candcsvmaker to directly call the source function from the code
@@ -528,7 +536,19 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             logger.error(str(traceback.format_exc()))
         exit()
 
+"""
 
+The results_a.csv that comes out of fetch houses the following information:
+Observation MJD start 
+Time (in seconds) of candidate
+DM
+Peak S/N
+Fetch score
+
+It's likely we have to read the h5 file to get the rest of the info. Can we import h5 plotter into the tpp code like we did candcsvmaker?
+
+
+"""
 
 
     ############## ############## ############## 
@@ -551,35 +571,34 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
                 logger.error(str(traceback.format_exc()))
             exit()
 
-
-        #!H TPPDB: gather all relevant info for RESULTS and push every
-        #TPPDB: detection to database. Is there a way to do this in bulk?
-        #TPPDB: ---ask Bikash. We will need to make sure we catch
-        #TPPDB: range/format issues here and report them appropriately.
-        
     else:
-        logger.warning('FETCH:FETCH did not create a csv file')
+        logger.error('FETCH:FETCH did not create a csv file')
+        if (db_on):
+            status = "ERROR in fetch: Fetch did not create a results_a.csv file."
+            tpp_state(status)
+        else:
+            logger.error(str(traceback.format_exc()))
+        exit()
 
-    #TPPDB: Determine output directory and submit to OUTCOMES
-    #TPPDB: output_directory? --- we will not do this here if the job launcher
-    #TPPDB: handles the transfer and disk management.
     
-    #TPPDB: at any point of failure above, the job_end should be updated and job_state should be updated to "ERROR: " with a relevant message.
 
-
-    
     ############## ############## ############## 
     ########## SUBMIT CANDS TO DATABASE ######## 
     ############## ############## ############## 
 
+    
     #!!! Here need a "write results to a file if db connection not
     #!!! happening successfully." We don't want to lose candidate
     #!!! records at this stage!
-
+    #!H TPPDB: gather all relevant info for RESULTS and push every
+    #TPPDB: detection to database. Is there a way to do this in bulk?
+    #TPPDB: ---ask Bikash. We will need to make sure we catch
+    #TPPDB: range/format issues here and report them appropriately.
+        
     
     n_push_success = 0
     if (db_on):
-        
+        # TPPDB: Here read results_a.csv and fill in the blanks.
         for all candidates:
             # Populate candidate TPPDB data. Does this need to be done earlier?
             data = {'outcomeID':outcomeID,
