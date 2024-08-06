@@ -1,13 +1,15 @@
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
 [project]
-name = "the_petabyte_project"
+name = "tpp"
 version = "0.0.1"
 authors = [ { name="Sarah Burke-Spolaor", email="sarah.spolaor@mail.wvu.edu" },
 	    { name="Reshma Anna-Thomas", email="" },
 	    { name="Bikash Kharel", email="" },
 	    { name="Jordan Stanley", email="" },
+            { name="Emmanuel Fonseca", email=""}
 	    ]
 description = "Infrastructure and pipeline package for The Petabyte Project."
 readme = "README.md"

@@ -1,0 +1,7 @@
+# NOTE! Edit only the "" values, not the keys in this file!
+tpp-db:
+    user: "enter your TPP-DB username here"
+    pass: "enter your TPP-DB password here"
+    token: "enter your TPP-DB token here"
+    ip: "enter IP address here"
+    port: "enter port number here"

@@ -3,7 +3,10 @@ import yaml
 import traceback
 
 try:
-    config_file = str(os.getenv('TPP_HOME'))+"/config.yml"
+    path = os.path.dirname(__file__)
+    path_elem = path.split("/")
+    path_base = "/".join(path_elem[0:len(path_elem)-1])
+    config_file = f"{path_base}/config.yml"
     with open(config_file, 'r') as file:
         auth = yaml.safe_load(file)
 except FileNotFoundError:

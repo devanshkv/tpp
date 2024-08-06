@@ -27,11 +27,11 @@ import your
 from your import Your
 import subprocess
 import os
+from tpp.infrastructure import database as db
 from your.utils.misc import YourArgparseFormatter
 from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
-import database as db #TPPDB: This line needs to be fixed.
 import candcsvmaker
 import traceback
 

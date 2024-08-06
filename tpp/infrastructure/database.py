@@ -1,10 +1,12 @@
+from tpp.data import db as dbconfig
 import traceback
 import requests   # Allow communications with TPP-DB API.
 import yaml       # For reading private authentication data.
-import config as dbconfig
 #from . import config as db
 #from tpp import infrastructure as db # Need to understand if this is the right thing to do and then replace the below instances of auth_info with db.auth
 
+tpp_url = f"http://{dbconfig['tpp-db']['ip']}:{dbconfig['tpp-db']['port']}/"
+tpp_headers = {"Authorization": f"Bearer {dbconfig['tpp-db']['token']}"}
 
 def init_document(collection,dataID,pipelineID=None,submissionID=None):
     """.
@@ -39,7 +41,7 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
                 "date_of_completion": None,         # Optional: "YYYY-MM-DDTHH:MM:SS"
                 "error": None                       # Optional: str
             },
-            "username": dbconfig.auth['tpp_user'],  # str
+            "username": dbconfig["tpp-db"]["user"],  # str
             "duration": None,                       # float in seconds
             "target_directory": None,               # str
             "log_name": None,                       # str
@@ -58,9 +60,9 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
 
 
     try:
-        collection_url = dbconfig.auth['tpp_url'] + str(collection)
-        #print("I'll try requests.post("+collection_url+",json="+str(dbdata)+",headers="+str(dbconfig.auth['tpp_headers']))
-        response = requests.post(collection_url,json=dbdata,headers=dbconfig.auth['tpp_headers'])
+        tpp_headers = {}
+        collection_url = tpp_url + str(collection)
+        response = requests.post(collection_url, json=dbdata, headers=tpp_headers)
         check_return_status(response)
         # Need to return the self-generated ID for the collection.
         responseID = response.json()['inserted_id'][0]
@@ -89,10 +91,9 @@ def patch(collection,collectionID,data):
 
     """
     try:
-        collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
+        collection_url = tpp_url + str(collection) + "/" + collectionID
         print("Patching "+str(data)+" to collection_url "+str(collection_url))
-        #print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
-        response = requests.patch(collection_url,json=data,headers=dbconfig.auth['tpp_headers'])
+        response = requests.patch(collection_url, json=data, headers=tpp_headers)
         check_return_status(response)
     except LookupError:
         print(traceback.format_exc())
@@ -118,9 +119,9 @@ def get(collection,collectionID):
     """
     try:
         #x = requests.get("http://ipaddress:port/endpoint/document_id", headers=headers_file)
-        collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
+        collection_url = tpp_url + str(collection) + "/" + collectionID
         print("Seeking entry ID "+collectionID+" from collection "+str(collection))
-        response = requests.get(collection_url,headers=dbconfig.auth['tpp_headers'])
+        response = requests.get(collection_url, headers=tpp_headers)
         check_return_status(response)
         outcome = response.json()
 
@@ -150,8 +151,8 @@ def current_pipelineID():
 
     """
     try:
-        collection_url = dbconfig.auth['tpp_url'] + "pipelines"
-        response = requests.get(collection_url,headers=dbconfig.auth['tpp_headers'])
+        collection_url = tpp_url + "pipelines"
+        response = requests.get(collection_url, headers=tpp_headers)
         check_return_status(response)
         outcome = response.json()
 
@@ -201,8 +202,8 @@ def current_pipelineID():
 #    """
 #    try:
 #        #x = requests.patch("http://ipaddress:port/endpoint/id", json={"field": "new_value"})
-#        collection_url = dbconfig.auth['tpp_url'] + str(collection) + "/" + collectionID
-#        response = requests.patch(collection_url,json=myjson,headers=dbconfig.auth['tpp_headers'])
+#        collection_url = tpp_url + str(collection) + "/" + collectionID
+#        response = requests.patch(collection_url,json=myjson,headers=tpp_headers)
 #        check_return_status(response)
 #
 #    except LookupError:
@@ -244,9 +245,8 @@ def search_data_position(myRA,myDec,mySize):
         # Set up query dictionary:
         query_dict = {"ra_j":{"$gte":myRA-mySize, "$lte":myRA+mySize},"dec_j": {"$gte":myDec-mySize, "$lte":myDec+mySize}}
         
-        collection_url = dbconfig.auth['tpp_url'] + "data"
-        #print("I'll try requests.post("+collection_url+",json="+str(data)+",headers="+str(dbconfig.auth['tpp_headers']))
-        response = requests.get(collection_url, json=query_dict, headers=dbconfig.auth['tpp_headers'])
+        collection_url = tpp_url + "data"
+        response = requests.get(collection_url, json=query_dict, headers=tpp_headers)
         check_return_status(response)
     
     except LookupError:
@@ -383,7 +383,7 @@ def gen_user(username,password):
     #auth = read_config()
 
     try:
-        response = requests.post(dbconfig.auth['tpp_url'] + "sign_up", json={"username":username,"password":password})
+        response = requests.post(tpp_url + "sign_up", json={"username":username,"password":password})
         check_return_status(response)
 
     except LookupError:
@@ -393,8 +393,8 @@ def gen_user(username,password):
         print_comms_error()
 
     else:
-        dbconfig.auth['tpp_user'] = username
-        dbconfig.auth['tpp_pass'] = password
+        dbconfig['tpp-db']['user'] = username
+        dbconfig['tpp-db']['pass'] = password
     
         token = gen_token()
 
@@ -426,11 +426,11 @@ def gen_token(length=3650):
     """
 
     # Read config file for authentication info
-    tpp_token_call = dbconfig.auth['tpp_url'] + "token?=" + str(length)
+    tpp_token_call = tpp_url + "token?=" + str(length)
     
     # Get the location of DATA_ID from TPP-DB
     try:
-        token = requests.post(tpp_token_call, data = {"username":dbconfig.auth['tpp_user'],"password":dbconfig.auth['tpp_pass']}).json()['access_token']
+        token = requests.post(tpp_token_call, data = {"username":dbconfig['tpp-db']['user'], "password":dbconfig['tpp-db']['pass']}).json()['access_token']
           
     except LookupError:
         print(traceback.format_exc())
@@ -484,7 +484,7 @@ def check_tpp_auth(auth_info):
     """
 
     try:
-        response = requests.get(dbconfig.auth['tpp_url'], headers=dbconfig.auth['tpp_headers'])
+        response = requests.get(tpp_url, headers=tpp_headers)
         check_return_status(response)
 
     except LookupError:

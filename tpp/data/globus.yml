@@ -1,11 +1,4 @@
 # NOTE! Edit only the "" values, not the keys in this file!
-tpp-db:
-    user: "enter your TPP-DB username here"
-    pass: "enter your TPP-DB password here"
-    token: "enter your TPP-DB token here"
-    ip: "enter IP address here"
-    port: "enter port number here"
-
 globus:
     refresh_token: "enter your globus key here"
     storage_collection_id: "d285fb00-e695-4f21-bfdb-d90485fab0c3"
