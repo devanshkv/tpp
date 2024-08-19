@@ -306,16 +306,16 @@ def check_return_status(response):
     elif (code_num == 61):
         raise LookupError("Error 61: If the traceback notes some kind of connection error, you may be running on a computer that does not have direct access to the TPP database node. Try running from Link.")
     elif (code_num == 113):
-        raise LookupError("Error 113 No route to host; You likely have the wrong IP or port. Double check your config.yml file and if needed ask Bikash/Sarah B-S for the latest database IP/port.")
+        raise LookupError("Error 113 No route to host; You likely have the wrong IP or port. Double check your database.yml file and if needed ask Bikash/Sarah B-S for the latest database IP/port.")
     elif (code_num == 400):
         raise LookupError("Error 400 Bad request; Check your data schema name or entry against the expected format.")
     elif (code_num == 401):
         detail = str(response.json())
-        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid. Please check the information your config.yml file and correct it (particularly TPP database username, password, token). Some clues may come from the database response reposted here: "+detail)
+        raise LookupError("Error 401 Unauthorized; Your TPP database authentication information is invalid. Please check the information your config files (database.yml) and correct it (particularly TPP database username, password, token). Some clues may come from the database response reposted here: "+detail)
     elif (code_num == 403):
         raise LookupError("Error 403 Forbidden; Your TPP database authentication information was valid, but for some reason you don't have permission to access the desired resource. Reach out to Bikash or Sarah B-S to proceed.")
     elif (code_num == 404):
-        raise LookupError("Error 404 Not Found: There are several possibilities:\n  - You requested an invalid collection or data field (check against schema or MongoDB_API list).\n  - Your TPP Database IP or port is invalid. Checking your config.yml file.\n  - The database may be down (confirm with Sarah).")
+        raise LookupError("Error 404 Not Found: There are several possibilities:\n  - You requested an invalid collection or data field (check against schema or MongoDB_API list).\n  - Your TPP Database IP or port is invalid. Checking your database.yml file.\n  - The database may be down (confirm with Sarah).")
     elif (code_num == 405):
         raise LookupError("Error 405 Method Not Allowed: You're trying to use a method (push, get, delete) that's not allowed by the database. Double check with Bikash that what you're trying to do is valid.")
     elif (code_num == 408):
@@ -342,7 +342,7 @@ def check_return_status(response):
     elif (code_num == 507):
         raise LookupError("Error 507 Insufficient Storage: Oh no, this is actually really bad. Report to TPP team IMMEDIATELY!")
     elif (code_num == 511):
-        raise LookupError("Error 511 Network Authentication Requred: Seems you forgot to authenticate (or your authentication was invalid; if the latter, please check your config.yml file.")
+        raise LookupError("Error 511 Network Authentication Requred: Seems you forgot to authenticate (or your authentication was invalid; if the latter, please check your database.yml file.")
     else:
         raise LookupError("TPP DATABASE SERVER ERROR: An unrecognized error occurred.")
 
@@ -379,9 +379,6 @@ def gen_user(username,password):
 
     """
 
-    # Read config file for IP/port info.
-    #auth = read_config()
-
     try:
         response = requests.post(tpp_url + "sign_up", json={"username":username,"password":password})
         check_return_status(response)
@@ -400,7 +397,7 @@ def gen_user(username,password):
 
 
         print("Username "+username+" created.")
-        print("****************************************************\nMake sure you update the following tpp-db information in your config.yml file:\nuser: \""+username+"\"\npass: \""+password+"\"\ntoken: \""+token+"\"\n****************************************************\n");
+        print("****************************************************\nMake sure you update the following tpp-db information in your database.yml file:\nuser: \""+username+"\"\npass: \""+password+"\"\ntoken: \""+token+"\"\n****************************************************\n");
 
         return
 
@@ -415,7 +412,7 @@ def gen_token(length=3650):
     
     This script can be run to instantiate a new user token. It is
     autoset to authenticate a token for 10 years. The user's
-    config.yml must contain a correct IP and port.
+    database.yml must contain a correct IP and port.
 
     Input: 
         length [expiry in days]
@@ -440,7 +437,7 @@ def gen_token(length=3650):
           
     print("SUCCESS!!!")
     print("Your new token is: " + token + "\n It will expire in " + str(length) + " days.")
-    print("Make sure you update the tpp-db \"token\" field in your config.yml file.\n")
+    print("Make sure you update the tpp-db \"token\" field in your database.yml file.\n")
     
     return token
 
@@ -456,9 +453,9 @@ def print_comms_error():
     print(traceback.format_exc())
     print("BASIC DB COMMUNICATION ERROR! See traceback above.")
     print("FIRST, CHECK:\n\tDid you use a valid collection name? Check against the \n\tofficial collection names on the tpp_mongodb_fastapi github.")
-    print("SECOND, CHECK:\n\tCheck that your config.yml file has the correct username,\n\tpassword, and token. It is also possible your token has\n\texpired and you need to generate a new one.")
+    print("SECOND, CHECK:\n\tCheck that your database.yml file has the correct username,\n\tpassword, and token. It is also possible your token has\n\texpired and you need to generate a new one.")
     print("If you got error 61:\n\tYou may be running on a computer that does not have\n\tdirect access to the TPP database node. Try running\n\tfrom Link.")
-    print("If your connection timed out or you got error 113:\n\tYou likely have the wrong IP/port in your config.yml\n\tfile; check it and confirm with Bikash/Sarah if needed.")
+    print("If your connection timed out or you got error 113:\n\tYou likely have the wrong IP/port in your database.yml\n\tfile; check it and confirm with Bikash/Sarah if needed.")
     print("Finally:\n\tIt is possible that the TPP server is down. If you have\n\tchecked for the above errors and are still having trouble,\n\tplease contact Bikash/Sarah.")
 
     return
@@ -494,64 +491,6 @@ def check_tpp_auth(auth_info):
         print_comms_error()
 
     return
-
-
-def read_config():
-    """.
-
-    Reads authentication data from config.yml file.
-
-    Returns a dictionary:
-    tpp-token (long string)
-    tpp-ip (e.g. 123.45.67.890
-    tpp-port (e.g. 2000)
-    tpp-url (e.g. https://tpp-ip:tpp-port/)
-    tpp-headers (construct needed for communication)
-    globus-token (globus key; not sure of format)
-
-    """
-
-    # Read tpp-db authentication
-    config_file = "/Users/sbs/soft/tpp/config.yml" ###### !H NEED TO FIX THIS and below references to config_file- Emmanuel knows how to deal with "general config loading as global variable for the whole code"
-    
-    # Read config file for authentication info
-    try:
-        with open(config_file, 'r') as file:
-            authentication = yaml.safe_load(file)
-    except FileNotFoundError:
-        print(traceback.format_exc())
-        print("BASIC TPP CODE SETUP ERROR!\n\tYou seem to not have a config.yml file in the expected\n\tplace: "+config_file+"\n\tOr, the file is for some reason unreadable.")
-        
-#    except:
-#        print(traceback.format_exc())
-#        print("BASIC TPP CODE SETUP ERROR! You seem to not have a config.yml file in the expected place, or the file is unreadable.")
-        
-    tpp_user  = authentication['tpp-db']['user']
-    tpp_pass  = authentication['tpp-db']['pass']
-    tpp_token = authentication['tpp-db']['token']
-    tpp_ip    = authentication['tpp-db']['ip']
-    tpp_port  = authentication['tpp-db']['port']
-    tpp_url = "http://" + tpp_ip + ":" + tpp_port + '/'
-    tpp_headers = {"Authorization": f"Bearer{tpp_token}"}
-
-    # Read globus authentication
-    globus_token = authentication['globus']['token']
-    
-    # Create dictionary for return.
-    mydict = {'tpp_user': tpp_user,
-              'tpp_pass': tpp_pass,
-              'tpp_token': tpp_token,
-              'tpp_ip': tpp_ip,
-              'tpp_port': tpp_port,
-              'tpp_url': tpp_url,
-              'tpp_headers': tpp_headers,
-              'globus_token': globus_token
-    }
-
-    #global auth_info
-    #auth_info = mydict
-
-    return mydict
 
 
 
