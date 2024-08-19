@@ -60,7 +60,6 @@ def init_document(collection,dataID,pipelineID=None,submissionID=None):
 
 
     try:
-        tpp_headers = {}
         collection_url = tpp_url + str(collection)
         response = requests.post(collection_url, json=dbdata, headers=tpp_headers)
         check_return_status(response)
