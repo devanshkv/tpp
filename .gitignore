@@ -103,5 +103,5 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-
-config.yml
+tpp/data/database.yml
+tpp/data/globus.yml
