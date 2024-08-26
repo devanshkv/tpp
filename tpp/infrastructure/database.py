@@ -426,8 +426,10 @@ def gen_token(length=3650):
     
     # Get the location of DATA_ID from TPP-DB
     try:
-        token = requests.post(tpp_token_call, data = {"username":dbconfig['tpp-db']['user'], "password":dbconfig['tpp-db']['pass']}).json()['access_token']
-          
+        response = requests.post(tpp_token_call, data = {"username":dbconfig['tpp-db']['user'], "password":dbconfig['tpp-db']['pass']})
+        token = response.json()['access_token']
+        check_return_status(response)
+
     except LookupError:
         print(traceback.format_exc())
           
