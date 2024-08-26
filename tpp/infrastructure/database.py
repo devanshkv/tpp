@@ -299,6 +299,9 @@ def check_return_status(response):
             status = True
             db_reply = response.json()['message']
         # This needed for .get responses, which don't include any message.
+        elif ('valid_till' in response.json().keys()):
+            status = True
+            db_reply = response.json()
         elif ('_id' in response.json().keys()):
             status = True
             db_reply = response.json()
