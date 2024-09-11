@@ -180,7 +180,7 @@ def do_candcsvmaker(your_fil_object):
 
     candcsvmaker_end = timer()
     logger.debug('CANDCSVMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
-    logger.debug('CANDCSVMAKER: found ' + str(n_events) ' events with ' + str(n_members) + ' members.')
+    logger.debug('CANDCSVMAKER: found ' + str(n_events) + ' events with ' + str(n_members) + ' members.')
 
     return n_events,n_members,event_dict
 
