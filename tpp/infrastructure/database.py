@@ -135,6 +135,38 @@ def get(collection,collectionID):
         print(outcome)
         return outcome
 
+
+def get_all_IDs(collection):
+    """.
+
+    Basic database search with collection ID.
+
+    Input:
+        database collection name and collection ID
+
+    Output: 
+        document.
+
+    """
+    try:
+        collection_url = tpp_url + str(collection) + "/" + collectionID
+        print("Seeking entry ID "+collectionID+" from collection "+str(collection))
+        response = requests.get(collection_url, headers=tpp_headers)
+        check_return_status(response)
+        outcome = response.json()
+
+    except LookupError:
+        print(traceback.format_exc())
+    
+    except:
+        print_comms_error()
+        
+    else:
+        print("I found the following document with ID "+collectionID)
+        print(outcome)
+        return outcome
+    
+    
     
 #!H!H!H This is working but only works for a particular known collectionID; it is not a general search operation.
 def current_pipelineID():
