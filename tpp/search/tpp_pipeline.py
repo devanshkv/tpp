@@ -289,7 +289,7 @@ if __name__ == "__main__":
 
     # !H!H THIS NEEDS TO BE CHECKED IF IT ACTUALLY COMES OUT AS AN MJD!!!
     mjd = your_files.your_header.tstart
-    logger.info("The start MJD of the file is "+str(mjd)
+    logger.info("The start MJD of the file is "+str(mjd))
     
     bw=your_files.your_header.bw
     logger.info("The bandwidth is "+str(bw)+" MHz")
