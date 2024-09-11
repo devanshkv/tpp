@@ -31,9 +31,10 @@ from tpp.infrastructure import database as db
 from your.utils.misc import YourArgparseFormatter
 from timeit import default_timer as timer
 import numpy as np
-import pandas as pd
+#import pandas as pd # I think pandas is not needed but see if it runs ok without!
 import candcsvmaker
 import traceback
+import csv
 
 """
 
@@ -155,7 +156,14 @@ def do_candcsvmaker(your_fil_object):
             cand_file_list.append(filename)
     
     # The threshold values below are set to let heimdall, your, and fetch control what gets through.
-    n_events,n_members = candcsvmaker.gencandcsv(candsfiles=cand_file_list,filelist=file_list,snr_th=0,clustersize_th=0,dm_min=0,dm_max=10000,label=1)
+    n_events,n_members,event_dict = candcsvmaker.gencandcsv(candsfiles=cand_file_list,filelist=file_list,snr_th=0,clustersize_th=0,dm_min=0,dm_max=10000,label=1)
+
+    # The event_dict returned from candcsvmaker is a list of dictionaries with the following keys:
+    #    - dm
+    #    - tcand (but this is time since start of file in seconds; we need to convert to MJD+time)
+    #    - width (but this is number of samples; we need to convert to time width based on tsamp)
+    #    - sn
+    # Conversion will be done in the main code; we need to later ensure a match to h5/fetch event IDs.
 
     #!!!RESHMA, GRAHAM, BIKASH AND OTHERS: Large change here, I changed
     #! candcsvmaker to directly call the source function from the code
@@ -174,9 +182,15 @@ def do_candcsvmaker(your_fil_object):
     logger.debug('CANDCSVMAKER: your_candmaker.py took '+ str(candcsvmaker_end-candcsvmaker_start)+' s')
     logger.debug('CANDCSVMAKER: found ' + str(n_events) ' events with ' + str(n_members) + ' members.')
 
-    return n_events,n_members
+    return n_events,n_members,event_dict
 
 def do_your_candmaker(your_fil_object):
+    """
+
+    your_candmaker creates h5 files based on the big CSV list of
+    files. Fetch score information is not available yet.
+
+    """
     candmaker_start=timer()
     logger.info('CANDMAKER:Preparing to run your_candmaker.py that makes h5 files.....\n')
     if your_fil_object.your_header.nchans <= 256:
@@ -267,6 +281,16 @@ if __name__ == "__main__":
     center_freq=your_files.your_header.center_freq
     logger.info("The center frequency is "+str(center_freq)+" MHz")
 
+    # gl, gb conversion done within your header class.
+    gl=your_files.your_header.gl
+    gb=your_files.your_header.gb
+    logger.info("The gl is "+str(gl)+" deg")
+    logger.info("The gb is "+str(gb)+" deg")
+
+    # !H!H THIS NEEDS TO BE CHECKED IF IT ACTUALLY COMES OUT AS AN MJD!!!
+    mjd = your_files.your_header.tstart
+    logger.info("The start MJD of the file is "+str(mjd)
+    
     bw=your_files.your_header.bw
     logger.info("The bandwidth is "+str(bw)+" MHz")
 
@@ -440,7 +464,13 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     logger.debug("DIR CHECK:Now you are at "+str(os.getcwd())+"\n")
 
     try:
-        n_events,n_members = do_candcsvmaker(your_fil_object)
+        n_events,n_members,event_dict = do_candcsvmaker(your_fil_object)
+        # This event_dict returned from candcsvmaker is a list of dictionaries with the following keys:
+        #    - dm
+        #    - tcand (but this is time since start of file in seconds; we need to convert to MJD+time)
+        #    - width (but this is number of samples; we need to convert to time width based on tsamp)
+        #    - sn
+        # Conversion will be done below; we need to later ensure a match to h5/fetch event IDs.
     except:
         if (db_on):
             status = "ERROR in candcsvmaker: "+str(traceback.format_exc())
@@ -536,41 +566,9 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             logger.error(str(traceback.format_exc()))
         exit()
 
-"""
 
-The results_a.csv that comes out of fetch houses the following information:
-Observation MJD start 
-Time (in seconds) of candidate
-DM
-Peak S/N
-Fetch score
-
-It's likely we have to read the h5 file to get the rest of the info. Can we import h5 plotter into the tpp code like we did candcsvmaker?
-
-
-"""
-
-
-    ############## ############## ############## 
-    ##############   H5 PLOTTER   ############## 
-    ############## ############## ############## 
-    if (db_on):
-        tpp_state("your_h5plotter")
-        
-        
     if os.path.isfile('results_a.csv'):
         logger.info('FETCH: FETCH ran successfully')
-        
-        try:
-            do_your_h5plotter()
-        except Exception as error:
-            if (db_on):
-                status = "ERROR in your_h5plotter: "+str(traceback.format_exc())
-                tpp_state(status)
-            else:
-                logger.error(str(traceback.format_exc()))
-            exit()
-
     else:
         logger.error('FETCH:FETCH did not create a csv file')
         if (db_on):
@@ -578,39 +576,216 @@ It's likely we have to read the h5 file to get the rest of the info. Can we impo
             tpp_state(status)
         else:
             logger.error(str(traceback.format_exc()))
-        exit()
+        exit()     
+
+
+    
+    ############## ############## ############## 
+    ##############  TPPDB_CANDS   ############## 
+    ############## ############## ############## 
+    """
+    The event_dict returned from candcsvmaker is a list of dictionaries with the following keys:
+       - dm
+       - tcand (but this is time since start of file in seconds; we need to convert to MJD+time)
+       - width (but this is number of samples; we need to convert to time width based on tsamp)
+       - sn
+    Here we need to later ensure a match to the h5/fetch event IDs generated by your/candmaker.
+
+    Candidate name tracking in Your_candmaker:
+    self.id = f"cand_tstart_{self.tstart:.12f}_tcand_{self.tcand:.7f}_dm_{self.dm:.5f}_snr_{self.snr:.5f}"
+    tstart is MJD start of the file
+    tcand is cand start in seconds 
+    dm is actual dm
+    snr is snr
+    Examples:
+    cand_tstart_59876.047106496655_tcand_148.0920000_dm_708.78400_snr_6.12012
+    cand_tstart_59876.047106496655_tcand_126.7080000_dm_1479.38000_snr_6.02877
+    cand_tstart_59876.047106496655_tcand_57.5152000_dm_1657.08000_snr_6.45542
+
+    Here we can make a loop over the results_a.csv to get the fetch
+    score and ID cands. This way, we ensure a double check if one
+    of the fetch listed cand_ids is not found due to some issue in
+    the way the different codes construct the cand_id. In addition,
+    candidates with low fetch scores will not be updated in this
+    way.
+
+    read results_a.csv
+    loop over each fetchcand:
+       deconstruct cand_id
+       use pythonic commands to find that cand in event_dict (using tcand, dm)
+       if not found, raise alarm.
+       if found, update fetch score.
+    After loop ends, loop event_dict and update with fixed tcand and width.
+    Also can make fetch histogram after loop ends!
+    """
+
+    if (db_on):
+        tpp_state("db_cand_push")
+        
+        
+        try:
+            fetch_scores = []
+
+            # Open and read the CSV file
+            with open('results_a.csv', mode='r') as file:
+                reader = csv.reader(file)
+                
+                # Skip the header if there is one
+                header = next(reader, None)
+    
+                # Process each row in the CSV file
+                for row in reader:
+                    # Split the second column by underscore
+                    split_values = row[1].split('_')
+            
+                    # Append values to respective lists if they exist
+                    mjd = float(split_values[2])
+                    tcand = float(split_values[4])
+                    dm = float(split_values[6])
+                    snr = float(split_values[8].replace('.h5',''))
+
+                    # Occasionally the fetch score will be empty; not
+                    # sure why this happens. Emailed resh/graham/evan
+                    # on 9/9/24 to gather intel.
+                    if (row[2] != ""):
+                        fetch_score = float(row[2])
+                        fetch_scores.append(fetch_score)
+
+                        # FETCH "CANDIDATE" THRESHOLD SET TO 0.2 BY DEFAULT.
+                        if (fetch_score >= 0.2):
+                            n_candidates += 1
+                    else:
+                        fetch_score = None
+                        logger.warning("Found candidate "+row[1]+" with a blank fetch score.")
+
+                # Map fetch scores to appropriate candidate in
+                # event_dict. To do this, for each results_a.csv
+                # listing, search event_dict for the entry with the
+                # appropriate DM and tcand values. When found, update
+                # the fetch score.
+                ii==0
+                found_cand = False
+                for mydict in event_dict:
+                    if (mydict['dm'] == dm and mydict['tcand'] == tcand):
+                        found_cand = True
+                        event_dict[ii]['fetch_score'] = fetch_score
+                        event_dict[ii]['result_name'] = row[1].replace('.h5','.png')
+                        break
+                    ii += 1
+
+                if (found_cand == False):
+                    logger.warning("I could not map fetch/event_dict for candidate "+row[1]+" ... this may point to some insidious error in tpp_pipeline.py that should be investigated.")
+                    raise LookupError("I could not map fetch/event_dict for candidate "+row[1]+" ... this may point to some insidious error in tpp_pipeline.py that should be investigated.")
+                    
+        except Exception as error:
+            # Yes this db_on check is redundant but I'm leaving it
+            # here in case we want to add any part of the above
+            # capability for non-TPP usage.
+            if (db_on):
+                status = "ERROR in db_cand_push: "+str(traceback.format_exc())
+                tpp_state(status)
+            else:
+                logger.error(str(traceback.format_exc()))
+            exit()
+
+        # Now loop over event dictionary and update tcand and width.
+        # Also update gl, gb, f_ctr parameters.
+        # !H!H TPPDB NEED TO MAKE SURE THIS WORKS PROPERLY!!!
+        for ii,mydict in enumerate(event_dict):
+            event_mjd = mjd + mydict["tcand"]/(3600.0 * 24.0)
+            mydict["tcand"] = event_mjd
+            event_width = tsamp * mydict["width"]
+            mydict["width"] = event_width
+            mydict["gl"] = gl
+            mydict["gb"] = gb
+            mydict["f_ctr"] = center_freq
+            mydict["outcomeID"] = outcomeID
+            mydict["submissionID"] = submissionID
+            mydict["dataID"] = dataID
+                
+        # Make histogram of fetch scores.
+        fetch_hist,bins = np.histogram(fetch_scores,bins=10)
+
+
 
     
 
-    ############## ############## ############## 
-    ########## SUBMIT CANDS TO DATABASE ######## 
-    ############## ############## ############## 
-
+    ############## ############## ##############
+    ########## SUBMIT CANDS TO DATABASE ########
+    ############## ############## ##############
     
-    #!!! Here need a "write results to a file if db connection not
-    #!!! happening successfully." We don't want to lose candidate
-    #!!! records at this stage!
-    #!H TPPDB: gather all relevant info for RESULTS and push every
+    #TPPDB:!!! Here need a "write results to a file if db connection not
+    #TPPDB:!!! happening successfully." We don't want to lose candidate
+    #TPPDB:!!! records at this stage!
+    #TPPDB: gather all relevant info for RESULTS and push every
     #TPPDB: detection to database. Is there a way to do this in bulk?
     #TPPDB: ---ask Bikash. We will need to make sure we catch
     #TPPDB: range/format issues here and report them appropriately.
-        
-    
-    n_push_success = 0
-    if (db_on):
-        # TPPDB: Here read results_a.csv and fill in the blanks.
-        for all candidates:
-            # Populate candidate TPPDB data. Does this need to be done earlier?
-            data = {'outcomeID':outcomeID,
-                    'submissionID':submissionID,
-                    'dataID':dataID}
-            try:
-                
-            except:
-                print_dberr()
-            else:
-                n_push_success += 1
 
+    # Need to just push events_dict.
+    # also update outcomes with fetch_hist. Other outcomes?
+    
+    if (db_on):
+        tpp_state("big_db_submit")
+        try:
+
+            # TPP pipeline needs to update a few things:
+            """
+            Results:
+            - all the candidates (new instances, each)
+
+            Outcomes: 
+            - (regular updates): job_state_time, job_state
+            - (beginning) node_name, job_start
+            - (mid) rfi_fraction (or rms pre/post zap)
+            - (mid/late) fetch_histogram, n_members, n_detections, n_candidates.
+            - (end) job_end
+            """
+
+            outcome_data = {"node_name":node_name,
+                    "job_start":time_start_UTC.isoformat(),
+                    "rfi_fraction":rfi_fraction,
+                    "fetch_histogram":fetch_hist,
+                    "n_detections": n_events,
+                    "n_members": n_members,
+                    "n_candidates":n_candidates}
+                # ALSO NEED JOB END BUT WE GET IT LATER.
+            db.patch("processing_outcomes",outcomeID,data=data)
+
+
+            # Tests:
+            #    - are misordered dict entries ok?
+            #    - do the datas look right and post fine?
+            #    - can I post multiple results in one post?
+            db.post("results",event_dict)
+
+        except:
+            print_dberr()
+
+
+
+
+    #basic test: number submitted is equal to number of cands?
+                
+
+        
+    ############## ############## ############## 
+    ##############   H5 PLOTTER   ############## 
+    ############## ############## ############## 
+    if (db_on):
+        tpp_state("your_h5plotter")
+        
+    try:
+        do_your_h5plotter()
+    except Exception as error:
+        if (db_on):
+            status = "ERROR in your_h5plotter: "+str(traceback.format_exc())
+            tpp_state(status)
+        else:
+            logger.error(str(traceback.format_exc()))
+        exit()
+
+    
 
     ############## ############## ############## 
     ##############     WRAP-UP    ############## 

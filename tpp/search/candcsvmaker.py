@@ -104,6 +104,8 @@ def gencandcsv(
         n_events += len(cands_filtered["snr"])
         logger.info("I found " + str(n_events) + " events with " + str(n_members) + " members.")
 
+        
+        
         if len(cands_filtered) == 0:
             logger.info(f"No candidate passes the threshold criterion in {file}")
         else:
@@ -118,7 +120,23 @@ def gencandcsv(
             logger.debug(f"Writing candidates in {file} to {outname}")
             cands_out.to_csv(outname, mode="a", header=False, index=False)
 
-    return n_events,n_members
+            # Also create dictionary of candidates for return to TPP-DB.
+            dict_of_lists["dm"] = cands_filtered["dm"]
+            # Note, at this point tcand is seconds since start of
+            #    file. It will require conversion in tpp_pipeline once
+            #    we have the MJD.
+            dict_of_lists["tcand"] = cands_filtered["stime"]
+            # Note, the below command packs the width as N samples. It
+            #    will require conversion in tpp_pipeline when we know
+            #    the tsamp of the file.
+            dict_of_lists["width"] = 2**cands_filtered["width"]
+            dict_of_lists["sn"] = cands_filtered["snr"] 
+
+            # This one-liner converts a dictionary of lists to a list
+            #    of dictionaries with the same keys.
+            event_dict = [dict(zip(dict_of_lists,ii)) for ii in zip(*dict_of_lists.values())]
+            
+    return n_events,n_members,event_dict
 
 
 if __name__ == "__main__":
