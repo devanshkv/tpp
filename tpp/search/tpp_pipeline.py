@@ -378,7 +378,7 @@ if __name__ == "__main__":
         tpp_state("your_writer")
 
     try:
-        n_zapped = do_RFI_filter(filestring,basename)
+        n_zapped = do_RFI_filter(filestring,your_files.your_header.basename)
     except:
         if (db_on):
             status = "ERROR in your_writer: "+ str(traceback.format_exc())
