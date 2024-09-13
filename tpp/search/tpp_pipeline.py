@@ -32,7 +32,7 @@ from your.utils.misc import YourArgparseFormatter
 from timeit import default_timer as timer
 import numpy as np
 #import pandas as pd # I think pandas is not needed but see if it runs ok without!
-import candcsvmaker
+from tpp.search import candcsvmaker
 import traceback
 import csv
 
