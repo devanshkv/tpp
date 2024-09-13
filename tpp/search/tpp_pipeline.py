@@ -91,12 +91,11 @@ def do_RFI_filter(filenames,basename):
     required for decimate.
     '''
     
-    #!RESHMA TPPDB: Somewhere here (probably in your_writer.py) we will have to
-    #!RESHMA TPPDB: get the code to update the RFI fraction and pre/post-zap RMS values.
-
     mask_start=timer()
     mask_cmd="your_rfimask.py -v -f "+str(filenames)+" -sk_sigma 4 -sg_sigma 4 -sg_frequency 15"
     logger.debug('RFI MASK: command = ' + mask_cmd)
+    print("I AM ABOUT TO DO IT!!!\n\n\n\n\n")
+    print("\n")
     subprocess.call(mask_cmd,shell=True)
     mask_end=timer()
     logger.debug('RFI MASK: your_rfimask.py took '+str(mask_end-mask_start)+' s')
@@ -306,7 +305,8 @@ if __name__ == "__main__":
 
 
     #TPPDB: !!!!! May need to read declination from the TPPDB, not the file itself; Graham says that sometimes declination is listed with seconds>60. !!!!!!
-    
+    #  (update on this Sep 2024: "your" may do this correctly, we don't read the RA/Dec directly from the header here, it's done thru the astropy interpreter).
+
     #TPPDB: !!!!! NEED TO ADD AN INTERNAL CHECK HERE TO MAKE SURE THAT THE DATA INFORMATION READ IS SANE!!!
 
 
@@ -493,7 +493,6 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
 
 
     #Create a directory for the h5s
-    # RESHMA can you check the directory tracing here? Why are we making an h5 directory and is it appropriately used below? Is this a folder that your_candmaker explicitly needs but doesn't create itself?
     cwd = os.getcwd()
     try:
         os.makedirs("h5")
