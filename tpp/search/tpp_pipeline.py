@@ -94,6 +94,7 @@ def do_RFI_filter(filenames,basename):
     mask_start=timer()
     mask_cmd="your_rfimask.py -v -f "+str(filenames)+" -sk_sigma 4 -sg_sigma 4 -sg_frequency 15"
     logger.debug('RFI MASK: command = ' + mask_cmd)
+    print('RFI MASK: command = ' + mask_cmd)
     print("I AM ABOUT TO DO IT!!!\n\n\n\n\n")
     print("\n")
     subprocess.call(mask_cmd,shell=True)
