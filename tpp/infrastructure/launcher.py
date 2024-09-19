@@ -164,7 +164,6 @@ if __name__ == "__main__":
         db_response = db.get("data",dataID)
         file_dir = db_response['location_on_filesystem']
         file_base = db_response['regex_filename']
-        file_location = file_base + file_dir
 
         #TODO Joe how will globus respond to a regex filename? How can we deal with this if there are multiple files? While we're on it... How can we check that all the data was successfully transferred? We will have all of the md5 hashes to know how big the files should be from source, in case that helps.
         #TODO Joe (and sarah) when passing a regex string will this cause issues to e.g. subprocess? Do special characters like ? or * need us to add some kind of "escape" \ symbol or something?
@@ -186,7 +185,7 @@ if __name__ == "__main__":
     # -----------------------------------------------
     # Transfer Necessary Files to Compute FS
     # -----------------------------------------------        
-    stor_location = file_base + file_dir
+    stor_location = file_base + file_dir  ###!!!!TODO ... is this backwards? shouldn't dir come first??
     print("Will transfer file from " + stor_location)
 
     # Transfer the Required files from Storage to Compute
