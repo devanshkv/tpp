@@ -77,6 +77,8 @@ if __name__ == "__main__":
     
     # Begin authorization via URL & User Input Code to Retrieve Token
     ## TODO: Use the Refresh_Tokens to Enable SSO Authentication for 24-Hours (work-around to avoid constant duofactor authentication)
+    ## Joe says we need to have a loop here to check if the key exists and skip the auth lines if it does.
+    ### Joe doesn't know how to write that off the top of his head. See if graham will reach out to globus support to do help this. NOTE TIM O DOES THIS ALL THE TIME (related to PSC) SO ASK HIM.
     authorize_url = auth_client.oauth2_get_authorize_url()
     print(f"Please go to this URL and login:\n\n{authorize_url}\n")
     auth_code = input("Please enter the code here: ").strip()
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     #   (This is the working directory that the file will be
     #   transferred to, and where tpp_pipeline will initiate its
     #   processing)
-    ## TODO: Finalize FS Structure on Compute
+    ## TODO: Finalize FS Structure on Compute (OPTIONAL. DONT HAVE A CENTRAL GROUP SCRATCH SPACE RIGHT NOW, WE ARE USING USER SCRATCH SPACES AND ARE HAPPY ABOUT THAT RIGHT NOW.) 
     comp_location = db.dbconfig.globus_comp_dir
 
 
@@ -163,9 +165,10 @@ if __name__ == "__main__":
         file_dir = db_response['location_on_filesystem']
         file_base = db_response['regex_filename']
         file_location = file_base + file_dir
+
         #TODO Joe how will globus respond to a regex filename? How can we deal with this if there are multiple files? While we're on it... How can we check that all the data was successfully transferred? We will have all of the md5 hashes to know how big the files should be from source, in case that helps.
         #TODO Joe (and sarah) when passing a regex string will this cause issues to e.g. subprocess? Do special characters like ? or * need us to add some kind of "escape" \ symbol or something?
-        
+        # Joe says ask Tim O
         #Initiate submissions doc, after we are sure that the job is likely to be launched successfully.
         submissionID = db.init_document("job_submissions",dataID,pipelineID=current_pipelineID)
         print("Created submissionID "+str(submissionID))
@@ -276,11 +279,13 @@ if __name__ == "__main__":
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
 
+    # SARAH MAKE SURE comp_location_final IS READ FROM whatever makes that directory
 
     #Transfer the Final Products from Compute to Storage
     #TODO !!! Joe, below here we need the transfer to actually transfer
     # everything from the directory to the target location. Can we do
-    # that with manage_single_transfer as written?    
+    # that with manage_single_transfer as written?
+    # Joe says probably not (9/19/2024)--- comp_location_final might be given as a directory and transfer everything, but it might not do that. ASK GLOBUS and/or TIM O. Sarah also make sure that h5 files or directories get to their own outcome folder tagged to job name (so we avoid overwrites--also check for existing folder to make sure it doesn't exist).
     try:
         fm.manage_single_transfer(tc, compute_id, storage_id, comp_location_final, stor_location_final)
     except:
@@ -303,6 +308,7 @@ if __name__ == "__main__":
         db.patch("job_submissions",submissionID,data={"status":{"date_of_completion":time_UTC,"error":traceback.format_exc()}})
         exit()
 
+    # JOE SAYS WE NEED TO ADD A COMMAND HERE TO DELETE EVERYTHING - to delete files after the specific files are transferred. Or we can write our own delete to make sure the entire directory tree is deleted.    
     #!!! JOE, how/when will all the data be cleaned up in the end? Will we just have a bunch of copies? Do we need to write a clean-up script after processing is done? Should this be separate?
     #(note for sarah self, this will affect where we write slurm logs to)
     #(note, this will also affect peoples ability to follow up on issues. maybe we don't do clean-up if we are still in the testing phase but turn auto-clean-up on later.)
