@@ -4,8 +4,8 @@ import yaml, os
 db = yaml.load(
     open(
         "{0}/{1}".format(
-            os.path.dirname(__file__), 
-            "database.yml"
+            os.getenv("HOME"), 
+            ".tpp/database.yml"
         ), 
         "r"
     ),
@@ -15,8 +15,8 @@ db = yaml.load(
 globus = yaml.load(
     open(
         "{0}/{1}".format(
-            os.path.dirname(__file__),
-            "globus.yml"
+            os.getenv("HOME"),
+            ".tpp/globus.yml"
         ),
         "r"
     ),
