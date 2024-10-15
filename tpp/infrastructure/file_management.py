@@ -2,7 +2,11 @@ import globus_sdk as globus
 
 def manage_single_transfer(transfer_client, src, dest, src_location, dest_location):
     # Initiate Transfer using TransferClient
-    task_data = globus.TransferData(source_endpoint=src, destination_endpoint=dest)
+    task_data = globus.TransferData(transfer_client,
+                                    src,
+                                    dest,
+                                    label="TPPtransfer_"+str(src),
+                                    sync_level="checksum")
     task_data.add_item(src_location, dest_location)
     task_session = transfer_client.submit_transfer(task_data)
     task_id = task_session["task_id"]
