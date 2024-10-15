@@ -38,13 +38,16 @@ import yaml       # For reading private authentication data.
 import globus_sdk as globus
 from globus_sdk.scopes import TransferScopes
 import argparse
-import database as db
+from tpp.infrastructure import database as db
+from tpp.infrastructure import file_management as fm
+from tpp.data import globus as tppglobconfig
 from datetime import datetime
 import getpass
 import traceback
-import file_manager as fm
 import random
-
+# High end Globus overviews suggested by Tim
+# https://docs.globus.org/api/auth/developer-guide/#developing-apps
+# https://docs.globus.org/api/transfer
 
 # -----------------------------------------------
 # BEGIN MAIN LOOP
@@ -61,7 +64,7 @@ if __name__ == "__main__":
     # Data ID requested by user (unique identifier in DM of file to be processed).
     dataID = args.dataID
     if dataID == None:
-        print("Please enter the Unique Data Identifier to be processed. Otherwise this code cannot run.")
+        print("Please enter the Unique Data Identifier (-d or --dataID). Otherwise this code cannot run.")
         exit()
 
 
@@ -69,8 +72,8 @@ if __name__ == "__main__":
     # GLOBUS Configuration
     # -----------------------------------------------
 
-    # Requires Globus Authentication with West Virginia University as the IdP
-    CLIENT_ID = db.dbconfig.globus_client_id
+    # Requires Globus. Authentication with West Virginia University as the IdP
+    CLIENT_ID = tppglobconfig['globus']['client_id']
     auth_client = globus.NativeAppAuthClient(CLIENT_ID)
     auth_client.oauth2_start_flow(refresh_tokens=True, requested_scopes=TransferScopes.all)
 
@@ -79,18 +82,31 @@ if __name__ == "__main__":
     ## TODO: Use the Refresh_Tokens to Enable SSO Authentication for 24-Hours (work-around to avoid constant duofactor authentication)
     ## Joe says we need to have a loop here to check if the key exists and skip the auth lines if it does.
     ### Joe doesn't know how to write that off the top of his head. See if graham will reach out to globus support to do help this. NOTE TIM O DOES THIS ALL THE TIME (related to PSC) SO ASK HIM.
+    # Tim O thinks there may be different authorizers. The one below with URL seems to time out after 10 minutes.
+    # Have a look at this site... 
+    # https://globus-sdk-python.readthedocs.io/en/stable/authorization.html
     authorize_url = auth_client.oauth2_get_authorize_url()
     print(f"Please go to this URL and login:\n\n{authorize_url}\n")
     auth_code = input("Please enter the code here: ").strip()
     tokens = auth_client.oauth2_exchange_code_for_tokens(auth_code)
     transfer_tokens = tokens.by_resource_server["transfer.api.globus.org"]
 
+    # Here we set up refreshing tokens.
+    transfer_refresh_t = transfer_tokens["refresh_token"]
+    transfer_access_t = transfer_tokens["access_token"]
+    expires_at_s = transfer_tokens["expires_at_seconds"]
+    authorizer = globus.RefreshTokenAuthorizer(transfer_refresh_t,auth_client, access_token=transfer_access_t,expires_at=expires_at_s)
+
+    print("expires at "+str(expires_at_s))
+
+    
     # Construct the AccessTokenAuthorizer to Enable the TransferClient (tc)
-    tc = globus.TransferClient(authorizer=globus.AccessTokenAuthorizer(transfer_tokens["access_token"]))
+    # Tim says that this handles the initial access. We still need to add refresh tokens because the "access_token" below expires fast.
+    tc = globus.TransferClient(authorizer=authorizer)
 
     # Set Up the Storage Collection and Compute Collection IDs
-    storage_id = db.dbconfig.globus_stor_id
-    compute_id = db.dbconfig.globus_comp_id
+    storage_id = tppglobconfig['globus']['storage_collection_id']
+    compute_id = tppglobconfig['globus']['compute_collection_id']
 
 
     # Construct the Location on Compute FS
@@ -98,14 +114,15 @@ if __name__ == "__main__":
     #   transferred to, and where tpp_pipeline will initiate its
     #   processing)
     ## TODO: Finalize FS Structure on Compute (OPTIONAL. DONT HAVE A CENTRAL GROUP SCRATCH SPACE RIGHT NOW, WE ARE USING USER SCRATCH SPACES AND ARE HAPPY ABOUT THAT RIGHT NOW.) 
-    comp_location = db.dbconfig.globus_comp_dir
+    comp_location = tppglobconfig['globus']['compute_scratch_dir']
 
 
 
     # Construct the Location on Compute FS of Products.
     #   (This is the working directory location of all tpp_pipeline
     #   results, from which we will transfer to permanent storage)
-    comp_location_final = db.dbconfig.globus_comp_dir+"/"#+!!! RESHMA what is the name of the directory where the final results come out? Check (or fix tpp_pipeline) after testing.
+    comp_location_final = tppglobconfig['globus']['compute_scratch_dir']+"/"
+    #TODO need to fix this to the correct standard subdirectory produced by tpp_pipeline! what is the name of the directory where the final results come out? Check (or fix tpp_pipeline) after testing.
 
     
     # Construct the Location on Storage FS of Products
@@ -140,7 +157,7 @@ if __name__ == "__main__":
 
     """
     result_division = random.randrange(1,500,1)
-    stor_location_final = db.dbconfig.globus_res_dir+"/"+str(result_division)+"/"+outcomeID
+    stor_location_final = tppglobconfig['globus']['storage_result_dir']+"/"+str(result_division)+"/"+outcomeID
 
 
     
