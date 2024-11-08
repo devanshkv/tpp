@@ -75,30 +75,12 @@ if __name__ == "__main__":
     # Requires Globus. Authentication with West Virginia University as the IdP
     CLIENT_ID = tppglobconfig['globus']['client_id']
     auth_client = globus.NativeAppAuthClient(CLIENT_ID)
-    auth_client.oauth2_start_flow(refresh_tokens=True, requested_scopes=TransferScopes.all)
-
     
-    # Begin authorization via URL & User Input Code to Retrieve Token
-    ## TODO: Use the Refresh_Tokens to Enable SSO Authentication for 24-Hours (work-around to avoid constant duofactor authentication)
-    ## Joe says we need to have a loop here to check if the key exists and skip the auth lines if it does.
-    ### Joe doesn't know how to write that off the top of his head. See if graham will reach out to globus support to do help this. NOTE TIM O DOES THIS ALL THE TIME (related to PSC) SO ASK HIM.
-    # Tim O thinks there may be different authorizers. The one below with URL seems to time out after 10 minutes.
-    # Have a look at this site... 
-    # https://globus-sdk-python.readthedocs.io/en/stable/authorization.html
-    authorize_url = auth_client.oauth2_get_authorize_url()
-    print(f"Please go to this URL and login:\n\n{authorize_url}\n")
-    auth_code = input("Please enter the code here: ").strip()
-    tokens = auth_client.oauth2_exchange_code_for_tokens(auth_code)
-    transfer_tokens = tokens.by_resource_server["transfer.api.globus.org"]
+    transfer_refresh_t = tppglobconfig['globus']['refresh_token']
+    transfer_access_t = tppglobconfig['globus']['access_token']
+    expires_at_s = tppglobconfig['globus']['expires_at_seconds']
 
-    # Here we set up refreshing tokens.
-    transfer_refresh_t = transfer_tokens["refresh_token"]
-    transfer_access_t = transfer_tokens["access_token"]
-    expires_at_s = transfer_tokens["expires_at_seconds"]
     authorizer = globus.RefreshTokenAuthorizer(transfer_refresh_t,auth_client, access_token=transfer_access_t,expires_at=expires_at_s)
-
-    print("expires at "+str(expires_at_s))
-
     
     # Construct the AccessTokenAuthorizer to Enable the TransferClient (tc)
     # Tim says that this handles the initial access. We still need to add refresh tokens because the "access_token" below expires fast.
@@ -328,4 +310,3 @@ if __name__ == "__main__":
     #!!! JOE, how/when will all the data be cleaned up in the end? Will we just have a bunch of copies? Do we need to write a clean-up script after processing is done? Should this be separate?
     #(note for sarah self, this will affect where we write slurm logs to)
     #(note, this will also affect peoples ability to follow up on issues. maybe we don't do clean-up if we are still in the testing phase but turn auto-clean-up on later.)
-
