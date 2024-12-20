@@ -52,6 +52,10 @@ static end location for that kind of thing.
 """
 
 
+def check_space():
+    """ !H!H!H IMPORTANT NEED TO CHECK THERE's ENOUGH SPACE TO HOUSE 3X THE MAIN FILE SIZE. """
+    TPPDB
+    
 def print_dberr():
     logger.error("*****DB COMMUNICATIONS ERROR, could not push to database.*****")
     logger.error("**************************************************************")
@@ -90,18 +94,23 @@ def do_RFI_filter(filenames,basename):
     have to do RFI mitigation on each step. Also, filterbanks
     required for decimate.
     '''
+
+    writer_start=timer()
+    writer_cmd="your_writer.py -v -f "+str(filenames)+" -t fil -r -sksig 4 -sgsig 4 -sgfw 15 -name "+basename+"_converted"
     
-    mask_start=timer()
-    mask_cmd="your_rfimask.py -v -f "+str(filenames)+" -sk_sigma 4 -sg_sigma 4 -sg_frequency 15"
-    logger.debug('RFI MASK: command = ' + mask_cmd)
-    print('RFI MASK: command = ' + mask_cmd)
-    print("I AM ABOUT TO DO IT!!!\n\n\n\n\n")
-    print("\n")
-    subprocess.call(mask_cmd,shell=True)
-    mask_end=timer()
-    logger.debug('RFI MASK: your_rfimask.py took '+str(mask_end-mask_start)+' s')
-    mask_basename=str(basename)+'_your_rfi_mask'
-    killmask_file= f"{mask_basename}.bad_chans"
+    logger.debug('WRITER/RFI FILTER: command = ' + writer_cmd)
+    subprocess.call(writer_cmd,shell=True)
+    writer_end=timer()
+    
+    logger.debug('WRITER/RFI FILTER: your_writer.py took '+str(writer_end-writer_start)+' s')
+
+    """
+    # Below is the code when we were using a "mask file" mode. It
+    # did not end up working because the later codes had trouble
+    # understanding the mask file.
+    writer_cmd="your_rfimask.py -v -f "+str(filenames)+" -sk_sigma 4 -sg_sigma 4 -sg_frequency 15"
+    writer_basename=str(basename)+'_!Hyour_rfi_mask'
+    killmask_file= f"{writer_basename}.bad_chans"
     with open(killmask_file,'r') as myfile:
     	file_str = myfile.read()
     my_list = [] ##initializing a list
@@ -110,8 +119,17 @@ def do_RFI_filter(filenames,basename):
     for chan in my_list:
     	 if chan == '':
         	 my_list.remove(chan)
+    if len(my_list) == 0:
+         logger.info(f'RFI MASK: No channels zapped')
+    else:
+         logger.debug(f'RFI MASK: No: of channels zapped = {len(my_list)}')
+         logger.info('RFI MASK: Percentage of channels zapped = '+str((len(my_list)/your_object.your_header.nchans)*100)+' %') 
 
     return len(my_list)
+    """
+    return
+
+
 
 def do_heimdall(your_fil_object):
     """.
@@ -496,7 +514,7 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
     #Create a directory for the h5s
     cwd = os.getcwd()
     try:
-        os.makedirs("h5")
+        os.makedir("h5")
     except FileExistsError:
         logger.error("Could not create h5 directory in current directory "+str(cwd))
         exit()
