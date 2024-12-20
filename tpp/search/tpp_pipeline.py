@@ -397,7 +397,9 @@ if __name__ == "__main__":
         tpp_state("your_writer")
 
     try:
-        n_zapped = do_RFI_filter(filestring,your_files.your_header.basename)
+        do_RFI_filter(filestring,your_files.your_header.basename)
+        #TPPDB Once we get RFI functionality working we'll include the stat here.
+        #TPPDB n_zapped = do_RFI_filter(filestring,your_files.your_header.basename)
     except:
         if (db_on):
             status = "ERROR in your_writer: "+ str(traceback.format_exc())
@@ -408,6 +410,8 @@ if __name__ == "__main__":
         
     your_fil_object=Your(your_files.your_header.basename+"_converted.fil")
 
+"""
+    #TPPDB RFI database functionality!
     # Report level of zapping
     if (n_zapped == 0):
          logger.info(f'RFI MASK: No channels zapped')
@@ -423,7 +427,7 @@ if __name__ == "__main__":
             db.patch("processing_outcomes",outcomeID,data=data)
         except:
             print_dberr()
-
+"""
 
     logger.debug('Writer done, moving on')
 
@@ -760,9 +764,9 @@ logger.warning("Low frequency (< 1 GHz) data. Preparing to run DDplan.py....\n")
             - (end) job_end
             """
 
+            # TPPDB RFI functionality, add this back in to outcome_data when it works... "rfi_fraction":rfi_fraction,
             outcome_data = {"node_name":node_name,
                     "job_start":time_start_UTC.isoformat(),
-                    "rfi_fraction":rfi_fraction,
                     "fetch_histogram":fetch_hist,
                     "n_detections": n_events,
                     "n_members": n_members,
